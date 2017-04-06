@@ -140,7 +140,11 @@ task grantPermissions (type: Exec, dependsOn: 'installDebug'){
     }else{
         println "Granting permissions for a windows os"
     }
-    commandLine "${adb} shell pm grant org.digitalcampus.mobile.learning android.permission.SET_ANIMATION_SCALE --stacktrace".split(" ")
+    commandLine "${adb} shell grant_permissions.sh ${adb} org.digitalcampus.mobile.learning".split(" ")
+
+  //  commandLine "${adb} shell pm grant org.digitalcampus.mobile.learning android.permission.READ_EXTERNAL_STORAGE --stacktrace".split(" ")
+  //  commandLine "${adb} shell pm grant org.digitalcampus.mobile.learning android.permission.WRITE_EXTERNAL_STORAGE --stacktrace".split(" ")
+  //  commandLine "${adb} shell pm grant org.digitalcampus.mobile.learning android.permission.SET_ANIMATION_SCALE --stacktrace".split(" ")
 
 }
 
