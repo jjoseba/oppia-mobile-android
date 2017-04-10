@@ -17,7 +17,7 @@ devices=$($adb devices | grep -v 'List of devices' | cut -f1 | grep '.')
 
 for device in $devices; do
     echo "Setting permissions to device" $device "for package" $package
-    $adb -s $device shell pm grant $package android.permission.READ_EXTERNAL_STORAGE
+    $adb -s $device shell pm grant $package android.permission.READ_PHONE_STATE
     $adb -s $device shell pm grant $package android.permission.WRITE_EXTERNAL_STORAGE
     $adb -s $device shell pm grant $package android.permission.SET_ANIMATION_SCALE
 done
