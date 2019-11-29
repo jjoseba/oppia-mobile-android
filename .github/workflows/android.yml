@@ -26,14 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Run Unit tests
-        run: ./gradlew testNormalDebugUnitTest
+        run: ./gradlew testNormalDebugUnitTest -Pandroid.incrementalJavaCompile=false
 
 
   tests:
     name: Instrumentation tests
     needs: [build,junit]
 
-    runs-on: macOS-10.14
+    runs-on: ubuntu-latest
 
     steps:
       - name: Install Android SDK
@@ -41,4 +41,4 @@ jobs:
       - name: Run UI Tests
         uses: vgaidarji/android-github-actions/emulator@v1.0.0
         with:
-          args: ./gradlew testDebug jacocoTestReport checkstyle pmd jdepend
+          args: ./gradlew connectedNormalDebugAndroidTest

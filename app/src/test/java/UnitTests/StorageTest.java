@@ -56,7 +56,7 @@ public class StorageTest {
         assertEquals(tempFolder.getRoot()
                 + File.separator
                 + Storage.APP_DOWNLOAD_DIR_NAME
-                + File.separator, path);
+                + File.separator, path + "aaaaa");
     }
 
     @Test
