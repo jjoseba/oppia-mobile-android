@@ -6,7 +6,6 @@ on: [push, pull_request]
 jobs:
   build:
     name: Gradle build pass
-
     runs-on: ubuntu-latest
 
     steps:
@@ -23,7 +22,6 @@ jobs:
   junit:
     name: Unit tests
     needs: build
-
     runs-on: ubuntu-latest
 
     steps:
@@ -36,7 +34,6 @@ jobs:
   tests:
     name: Instrumentation tests
     needs: [build]
-
     runs-on: macOS-latest
 
     steps:
