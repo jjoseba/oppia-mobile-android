@@ -22,10 +22,14 @@ jobs:
     name: Instrumentation tests
     needs: build
 
-    runs-on: ubuntu-latest
+    runs-on: macOS-10.14
 
     steps:
       - uses: actions/checkout@v1
+
+      - name: Install Android SDK
+        uses: malinskiy/action-android/install-sdk@release/0.0.3
+
       - uses: malinskiy/action-android/emulator-run-cmd@release/0.0.3
         with:
           cmd: ./gradlew integrationTest
