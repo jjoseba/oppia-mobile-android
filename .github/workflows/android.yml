@@ -16,3 +16,19 @@ jobs:
         java-version: 1.8
     - name: Build with Gradle
       run: ./gradlew build
+
+
+  tests:
+    name: Instrumentation tests
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: malinskiy/action-android/emulator-run-cmd@release/0.0.3
+        with:
+          cmd: ./gradlew integrationTest
+          api: 25
+          tag: google_apis
+          abi: x86
