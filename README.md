@@ -1,6 +1,8 @@
 OppiaMobile Learning
 ====================
 
+<a href="https://github.com/jjoseba/oppia-mobile-android"><img alt="GitHub Actions status" src="https://github.com/jjoseba/oppia-mobile-android/workflows/Android%20Tests/badge.svg"></a>
+
 For full information about OppiaMobile, please visit:
 
 https://digital-campus.org/oppiamobile/

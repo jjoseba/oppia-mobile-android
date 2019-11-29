@@ -1,9 +1,6 @@
-name: Android CI
+name: Android Tests
 
-on:
-  push:
-  pull_request:
-    types: [opened]
+on: push
 
 jobs:
   build:
