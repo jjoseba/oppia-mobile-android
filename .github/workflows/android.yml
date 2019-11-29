@@ -28,7 +28,7 @@ jobs:
       - name: Install Android SDK
         uses: malinskiy/action-android/install-sdk@release/0.0.3
       - name: Run Unit tests
-          run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest
       - name: Run UI Tests
         uses: vgaidarji/android-github-actions/emulator@v1.0.0
         with:
