@@ -1,7 +1,9 @@
 name: Android CI
 
-on: [push, pull_request]
-  types: [opened]
+on:
+  push
+  pull_request:
+    types: [opened]
 
 jobs:
   build:
