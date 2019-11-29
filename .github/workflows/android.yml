@@ -17,18 +17,27 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew assembleNormalDebug
 
+  junit:
+    name: Unit tests
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Run Unit tests
+        run: ./gradlew testDebugUnitTest
+
 
   tests:
     name: Instrumentation tests
-    needs: build
+    needs: [build,junit]
 
     runs-on: macOS-10.14
 
     steps:
       - name: Install Android SDK
         uses: malinskiy/action-android/install-sdk@release/0.0.3
-      - name: Run Unit tests
-        run: ./gradlew testDebugUnitTest
       - name: Run UI Tests
         uses: vgaidarji/android-github-actions/emulator@v1.0.0
         with:
