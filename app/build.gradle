@@ -265,7 +265,7 @@ dependencies {
 }
 
 
-task grantPermissions(type: Exec, dependsOn: 'installDebug') {
+task grantPermissions(type: Exec, dependsOn: 'installNormalDebug') {
     group = 'test'
     description = 'Grant permissions for testing.'
 
