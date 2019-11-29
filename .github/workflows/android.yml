@@ -27,8 +27,9 @@ jobs:
     steps:
       - name: Install Android SDK
         uses: malinskiy/action-android/install-sdk@release/0.0.3
-
+      - name: Run Unit tests
+          run: ./gradlew testDebugUnitTest
       - name: Run UI Tests
-        uses: vgaidarji/android-github-actions/emulator@v1.0.1
+        uses: vgaidarji/android-github-actions/emulator@v1.0.0
         with:
-          args: "./gradlew testDebug jacocoTestReport checkstyle pmd jdepend"
+          args: ./gradlew testDebug jacocoTestReport checkstyle pmd jdepend
