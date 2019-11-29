@@ -15,7 +15,7 @@ jobs:
       with:
         java-version: 1.8
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew assembleNormalDebug
 
 
   tests:
@@ -25,14 +25,12 @@ jobs:
     runs-on: macOS-10.14
 
     steps:
-      - uses: actions/checkout@v1
-
       - name: Install Android SDK
         uses: malinskiy/action-android/install-sdk@release/0.0.3
 
       - uses: malinskiy/action-android/emulator-run-cmd@release/0.0.3
         with:
-          cmd: ./gradlew integrationTest
+          cmd: ./gradlew test
           api: 25
           tag: google_apis
           abi: x86
