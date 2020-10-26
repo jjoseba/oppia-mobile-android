@@ -16,9 +16,9 @@ android {
 
     defaultConfig {
         versionCode 81
-        versionName "7.1.5"
+        versionName "7.1.5-unicef.1.int"
 
-        applicationId "org.digitalcampus.mobile.learning"
+        applicationId "org.unicef.ipc.oppia"
 
         minSdkVersion 21
         targetSdkVersion 29
