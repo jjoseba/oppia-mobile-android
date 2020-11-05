@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Main color for actionBar, buttons, etc -->
-    <color name="theme_primary">@color/oppia_primary</color>
-    <color name="theme_primary_dark">@color/oppia_primary_dark</color>
+    <color name="theme_primary">@color/unicef_blue</color>
+    <color name="theme_primary_dark">@color/unicef_blue</color>
     <!-- Secondary color: input tint, scorecard color, etc -->
-    <color name="theme_secondary">@color/oppia_secondary</color>
-    <color name="theme_secondary_light">@color/oppia_secondary_light</color>
+    <color name="theme_secondary">@color/unicef_blue</color>
+    <color name="theme_secondary_light">@color/unicef_blue</color>
 
     <!-- launcher icon drawable -->
-    <item name="app_icon" type="drawable">@drawable/dc_logo</item>
+    <item name="app_icon" type="drawable">@drawable/unicef_logo</item>
     <!-- Drawables for brand icon and course default image -->
-    <item name="brand_icon" type="drawable">@drawable/dc_logo</item>
-    <item name="course_icon_placeholder" type="drawable">@drawable/default_course</item>
+    <item name="brand_icon" type="drawable">@drawable/unicef_logo</item>
+    <item name="course_icon_placeholder" type="drawable">@drawable/unicef_course</item>
 
     <!-- Color used for dropdown menus and list tints, it is "theme_secondary_light" with transparency -->
-    <color name="theme_focus_semitransparent">#cc9aca3c</color> <!-- added 80%(CC) transparency -->
-    <color name="theme_tint_almosttransparent">#409aca3c</color> <!-- added 25%(40) transparency -->
+    <color name="theme_focus_semitransparent">#cc00AEEF</color> <!-- added 80%(CC) transparency -->
+    <color name="theme_tint_almosttransparent">#4000AEEF</color> <!-- added 25%(40) transparency -->
 
     <!-- Color used for highlight dark text -->
-    <color name="theme_dark">@color/oppia_dark</color>
+    <color name="theme_dark">@color/unicef_sec_darkblue</color>
 
     <!-- Toolbar -->
     <color name="toolbar_bg_color">@color/theme_primary</color>
@@ -29,12 +29,12 @@
     <color name="drawer_bg">@color/background_light</color>
     <color name="drawer_text">@color/text_dark</color>
     <color name="drawer_subtitle">@color/theme_secondary</color>
-    <color name="drawer_icontint">@color/default_icon_foreground</color>
+    <color name="drawer_icontint">@color/unicef_blue</color>
     <color name="drawer_divider">@color/highlight_separator</color>
 
 
     <!-- TabLayout and filter tabs -->
-    <color name="tab_bg_color">#e0dde2</color>
+    <color name="tab_bg_color">@color/unicef_warmgrey</color>
     <color name="tab_indicator">@color/theme_secondary_light</color>
     <color name="tab_text_color">@color/text_dark</color>
     <color name="tab_selected_text_color">@color/text_dark</color>
@@ -45,11 +45,11 @@
     <color name="design_snackbar_background_color" tools:override="true">@color/theme_primary</color>
     <color name="gamification_snackbar_gradient_start">@color/theme_secondary_light</color>
     <color name="gamification_snackbar_gradient_end">@color/theme_primary</color>
-    <color name="subtitle_bar">@color/theme_secondary_light</color>
+    <color name="subtitle_bar">@color/unicef_warmgrey</color>
     <color name="points_badge">@color/theme_dark</color>
 
     <color name="quiz_attempted">@color/theme_secondary</color>
-    <color name="quiz_passed">@color/theme_secondary_light</color>
+    <color name="quiz_passed">@color/unicef_sec_green1</color>
 
     <!-- Course index -->
     <color name="course_index_section_title">@color/text_dark</color>
