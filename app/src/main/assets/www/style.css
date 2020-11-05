@@ -29,7 +29,7 @@ h1,h2,h3,h4,h5,h6{
     font-weight:lighter;
     text-transform:uppercase;
     padding: 0.7em 12px 0.3em;
-    border-left:15px solid #74B042;
+    border-left:15px solid #00aeef;
     margin: 1.5em 0 15px -20px;
     color:#020202;
 }
@@ -59,11 +59,11 @@ li:before {
       max-height: 0px;
       left: -28px;
       top: -0px;
-      color: #74B042;
+      color: #00aeef;
       font-size: 30px;
  }
 a {
-	color: #495525;
+	color: #374EA2;
 	text-decoration: underline;
 }
 
@@ -136,7 +136,7 @@ ul.toc li a:after{
 	margin:10px 5px;
 	padding: 5px;
 	font-weight: bold;
-	border: 2px solid #77A240;
+	border: 2px solid #00aeef;
 	border-radius: 0.5em;
 	-moz-border-radius: 0.5em;
 	-webkit-border-radius: 0.5em;
