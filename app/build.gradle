@@ -46,6 +46,7 @@ android {
 
     // Configure to use Java8 features like try-with-resources
     compileOptions {
+        incremental false
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }

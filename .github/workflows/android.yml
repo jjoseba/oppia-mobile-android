@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: set up JDK 1.8
@@ -20,29 +20,30 @@ jobs:
 
   junit:
     name: Unit tests
-    needs: build
+    needs: [build]
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Run Unit tests
-        run: ./gradlew testNormalDebugUnitTest -Pandroid.incrementalJavaCompile=false
+        run: ./gradlew testNormalDebugUnitTest
+
 
   tests:
     name: Instrumentation tests
     needs: [build]
-    runs-on: macOS-latest
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Run all instrumented Tests
-        uses: reactivecircus/android-emulator-runner@v1
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 28
+          api-level: 29
           target: google_apis
           script: ./gradlew connectedNormalDebugAndroidTest
