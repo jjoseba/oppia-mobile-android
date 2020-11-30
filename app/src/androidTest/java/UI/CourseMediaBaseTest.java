@@ -51,14 +51,14 @@ public abstract class CourseMediaBaseTest {
         storageStrategy.updateStorageLocation(context);
         editor.commit();
 
-        CourseUtils.cleanUp();
+        //CourseUtils.cleanUp();
     }
 
 
     @After
     public void tearDown() throws Exception {
         testDBHelper.tearDown();
-//        CourseUtils.cleanUp();
+        CourseUtils.cleanUp();
     }
 
     protected void copyCourseFromAssets(String filename){
