@@ -58,4 +58,4 @@ jobs:
           api-level: 29
           profile: pixel
           target: google_apis
-          script: ./gradlew connectedNormalDebugAndroidTest --debug
+          script: ./gradlew connectedNormalDebugAndroidTest

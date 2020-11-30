@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.utils.storage.ExternalStorageStrategy;
+import org.digitalcampus.oppia.utils.storage.InternalStorageStrategy;
 import org.digitalcampus.oppia.utils.storage.Storage;
 import org.digitalcampus.oppia.utils.storage.StorageAccessStrategy;
 import org.junit.After;
@@ -42,14 +43,14 @@ public abstract class CourseMediaBaseTest {
         testDBHelper = new TestDBHelper(InstrumentationRegistry.getInstrumentation().getTargetContext());
         testDBHelper.setUp();
 
-        StorageAccessStrategy storageStrategy = new ExternalStorageStrategy();
+        StorageAccessStrategy storageStrategy = new InternalStorageStrategy();
         Storage.setStorageStrategy(storageStrategy);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(PrefsActivity.PREF_STORAGE_OPTION, storageStrategy.getStorageType());
         storageStrategy.updateStorageLocation(context);
-        editor.commit();
+        editor.apply();
 
         //CourseUtils.cleanUp();
     }
