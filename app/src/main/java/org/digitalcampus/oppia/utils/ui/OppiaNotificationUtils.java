@@ -6,17 +6,17 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.BitmapFactory;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
-import android.preference.PreferenceManager;
+
+import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 import androidx.core.app.NotificationCompat;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.application.MobileLearning;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
 
@@ -24,6 +24,10 @@ public class OppiaNotificationUtils {
 
     public static final String CHANNEL_INTERNAL_NOTIFICATIONS = "channel_internal_notifications";
     public static final int NOTIF_ID_SIMPLE_MESSAGE = 0;
+
+    private OppiaNotificationUtils() {
+        throw new IllegalStateException("Utility class");
+    }
 
     public static void initializeOreoNotificationChannels(Context context) {
         // Create the NotificationChannel, but only on API 26+ because
@@ -61,15 +65,7 @@ public class OppiaNotificationUtils {
         notifBuilder.setSound(defaultSoundUri);
         notifBuilder.setAutoCancel(setAutoCancel);
         notifBuilder.setSmallIcon(R.drawable.ic_notification);
-
-        //Notification styles changed since Lollipop
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            int color = ctx.getResources().getColor(R.color.theme_primary);
-            notifBuilder.setColor(color);
-        } else {
-            //in older versions, we show the App logo
-            notifBuilder.setLargeIcon(BitmapFactory.decodeResource(ctx.getResources(), MobileLearning.APP_LOGO));
-        }
+        notifBuilder.setColor(ContextCompat.getColor(ctx, R.color.theme_primary));
 
         return notifBuilder;
     }
@@ -83,7 +79,7 @@ public class OppiaNotificationUtils {
         }
     }
 
-    public static void sendSimpleMessage(Context ctx, boolean setAutoCancel, int id, String message){
+    public static void sendSimpleMessage(Context ctx, boolean setAutoCancel, String message){
         NotificationCompat.Builder mBuilder  = OppiaNotificationUtils.getBaseBuilder(ctx, setAutoCancel);
         mBuilder.setContentTitle(ctx.getString(R.string.app_name)).setContentText(message).build();
         OppiaNotificationUtils.sendNotification(ctx, NOTIF_ID_SIMPLE_MESSAGE, mBuilder.build());

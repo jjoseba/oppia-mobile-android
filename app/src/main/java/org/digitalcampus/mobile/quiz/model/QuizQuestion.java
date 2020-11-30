@@ -40,7 +40,7 @@ public class QuizQuestion implements Serializable {
     protected float userscore = 0;
     private Map<String, String> title = new HashMap<>();
     private Map<String, String> props = new HashMap<>();
-    protected boolean feedbackDisplayed = false;
+    private boolean feedbackDisplayed = false;
     protected List<Response> responseOptions = new ArrayList<>();
     protected List<String> userResponses = new ArrayList<>();
     protected String feedback = "";
@@ -78,6 +78,10 @@ public class QuizQuestion implements Serializable {
                 }
             }
         }
+        this.calculateUserscore(total);
+    }
+
+    public void calculateUserscore(float total){
         if (this.getProp(Quiz.JSON_PROPERTY_MAXSCORE) != null) {
             int maxscore = Integer.parseInt(this.getProp(Quiz.JSON_PROPERTY_MAXSCORE));
             if (total > maxscore) {
@@ -129,11 +133,14 @@ public class QuizQuestion implements Serializable {
     }
 
     public String getFeedback(String lang) {
-        return "";
+        // reset feedback back to nothing
+        this.feedback = "";
+        this.mark(lang);
+        return this.feedback;
     }
 
     public int getMaxScore() {
-        return 0;
+        return Integer.parseInt(this.getProp(Quiz.JSON_PROPERTY_MAXSCORE));
     }
 
     public JSONObject responsesToJSON() {

@@ -19,18 +19,19 @@ package org.digitalcampus.oppia.application;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 
 import com.splunk.mint.Mint;
+import com.splunk.mint.MintLogLevel;
 
-import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.PrefsActivity;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.exception.UserNotFoundException;
 import org.digitalcampus.oppia.listener.PreloadAccountsListener;
 import org.digitalcampus.oppia.model.User;
+import org.digitalcampus.oppia.model.db_model.UserPreference;
 import org.digitalcampus.oppia.task.Payload;
 import org.digitalcampus.oppia.task.PreloadAccountsTask;
 import org.digitalcampus.oppia.utils.storage.Storage;
@@ -39,6 +40,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import androidx.preference.PreferenceManager;
 
 import static org.digitalcampus.oppia.activity.PrefsActivity.PREF_PHONE_NO;
 
@@ -66,7 +69,12 @@ public class SessionManager {
             PrefsActivity.PREF_DISABLE_NOTIFICATIONS,
             PrefsActivity.PREF_SHOW_GAMIFICATION_EVENTS);
 
+    private static final String STR_FALSE = "false";
+    private static final String STR_TRUE = "true";
 
+    private SessionManager() {
+        throw new IllegalStateException("Utility class");
+    }
     public static boolean isLoggedIn(Context ctx) {
         String username = getUsername(ctx);
         return !username.trim().equals("");
@@ -86,7 +94,7 @@ public class SessionManager {
             return u.getDisplayName();
 
         } catch (UserNotFoundException e) {
-            Mint.logException(e);
+            Mint.logEvent(e.getMessage(), MintLogLevel.Info);
             Log.d(TAG, "User not found: ", e);
             return null;
         }
@@ -119,7 +127,7 @@ public class SessionManager {
         editor.putBoolean(PrefsActivity.PREF_BADGING_ENABLED, user.isBadgingEnabled());
 
         loadUserPrefs(ctx, username, editor);
-        setUserApiKeyValid(ctx, user, true);
+        setUserApiKeyValid(user, true);
         Mint.setUserIdentifier(username);
         editor.apply();
     }
@@ -131,7 +139,7 @@ public class SessionManager {
 
         //If there was a logged in user, we save her Preferences in the DB
         if (!TextUtils.isEmpty(username)) {
-            saveUserPrefs(ctx, username, prefs);
+            saveUserPrefs(username, prefs);
         }
 
         //Logout the user (unregister from Preferences)
@@ -140,48 +148,43 @@ public class SessionManager {
         editor.apply();
     }
 
-    private static void saveUserPrefs(Context ctx, String username, SharedPreferences prefs) {
+    private static void saveUserPrefs(String username, SharedPreferences prefs) {
 
-        ArrayList<Pair<String, String>> userPrefs = new ArrayList<>();
+        List<UserPreference> userPreferences = new ArrayList<>();
 
         for (String prefID : USER_STRING_PREFS) {
             String prefValue = prefs.getString(prefID, "");
             if (!TextUtils.isEmpty(prefValue)) {
-                Pair<String, String> userPref = new Pair<>(prefID, prefValue);
-                userPrefs.add(userPref);
+                userPreferences.add(new UserPreference(username, prefID, prefValue));
             }
         }
 
         for (String prefID : USER_BOOLEAN_PREFS) {
             if (prefs.contains(prefID)) {
                 boolean prefValue = prefs.getBoolean(prefID, false);
-                Pair<String, String> userPref = new Pair<>(prefID, prefValue ? "true" : "false");
-                userPrefs.add(userPref);
+                userPreferences.add(new UserPreference(username, prefID, prefValue ? STR_TRUE : STR_FALSE));
             }
         }
 
-
-        DbHelper db = DbHelper.getInstance(ctx);
-        db.insertUserPreferences(username, userPrefs);
+        App.getDb().userPreferenceDao().insertAll(userPreferences);
     }
 
     //Warning: this method doesn't call prefs.apply()
     private static void loadUserPrefs(Context ctx, String username, SharedPreferences.Editor prefsEditor) {
 
-        DbHelper db = DbHelper.getInstance(ctx);
-        List<Pair<String, String>> userPrefs = db.getUserPreferences(username);
+        List<UserPreference> userPrefs = App.getDb().userPreferenceDao().getAllForUser(username);
 
         ArrayList<String> prefsToSave = new ArrayList<>();
         prefsToSave.addAll(USER_STRING_PREFS);
         prefsToSave.addAll(USER_BOOLEAN_PREFS);
 
-        for (Pair<String, String> pref : userPrefs) {
-            String prefKey = pref.first;
-            String prefValue = pref.second;
+        for (UserPreference userPref : userPrefs) {
+            String prefKey = userPref.getPreference();
+            String prefValue = userPref.getValue();
             if (USER_STRING_PREFS.contains(prefKey)) {
                 prefsEditor.putString(prefKey, prefValue);
             } else if (USER_BOOLEAN_PREFS.contains(prefKey)) {
-                prefsEditor.putBoolean(prefKey, "true".equals(prefValue));
+                prefsEditor.putBoolean(prefKey, STR_TRUE.equals(prefValue));
             }
             prefsToSave.remove(prefKey);
         }
@@ -190,30 +193,31 @@ public class SessionManager {
         if (!prefsToSave.isEmpty()) {
             for (String pref : prefsToSave) prefsEditor.remove(pref);
             //Then we set the default values again (only empty values, will not overwrite the others)
-            PreferenceManager.setDefaultValues(ctx, R.xml.prefs, true);
+            App.loadDefaultPreferenceValues(ctx, true);
         }
     }
 
-    public static void setUserApiKeyValid(Context ctx, User user, boolean valid) {
+    public static void setUserApiKeyValid(User user, boolean valid) {
         ArrayList<Pair<String, String>> userPrefs = new ArrayList<>();
-        Pair<String, String> userPref = new Pair<>(APIKEY_VALID, valid ? "true" : "false");
+        Pair<String, String> userPref = new Pair<>(APIKEY_VALID, valid ? STR_TRUE : STR_FALSE);
         userPrefs.add(userPref);
 
-        DbHelper.getInstance(ctx).insertUserPreferences(user.getUsername(), userPrefs);
+        UserPreference userPreference = new UserPreference(user.getUsername(), APIKEY_VALID, valid ? STR_TRUE : STR_FALSE);
+        App.getDb().userPreferenceDao().insert(userPreference);
     }
 
     public static boolean isUserApiKeyValid(Context ctx) {
         if (isLoggedIn(ctx)) {
             String user = getUsername(ctx);
-            return isUserApiKeyValid(ctx, user);
+            return isUserApiKeyValid(user);
         }
         return true;
     }
 
-    public static boolean isUserApiKeyValid(Context ctx, String username) {
-        DbHelper db = DbHelper.getInstance(ctx);
-        String prefValue = db.getUserPreference(username, APIKEY_VALID);
-        return (prefValue == null || "true".equals(prefValue));
+    public static boolean isUserApiKeyValid(String username) {
+
+        UserPreference userPref = App.getDb().userPreferenceDao().getUserPreference(username, APIKEY_VALID);
+        return (userPref == null || STR_TRUE    .equals(userPref.getValue()));
     }
 
     public static void preloadUserAccounts(Context ctx, PreloadAccountsListener listener) {

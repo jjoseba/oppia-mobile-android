@@ -22,17 +22,25 @@ import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 
+import com.splunk.mint.Mint;
+
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-// Code from StackOverflow: http://stackoverflow.com/questions/9340332/how-can-i-get-the-list-of-mounted-external-storage-of-android-device/19982338#19982338
 
 public class StorageUtils {
 
     public static final String TAG = StorageUtils.class.getSimpleName();
     private static DeviceFile mExternalDrive;
     private static DeviceFile mInternalDrive;
+
+    private StorageUtils() {
+        throw new IllegalStateException("Utility class");
+    }
 
     public static DeviceFile getInternalMemoryDrive() {
         DeviceFile ret = null;
@@ -44,11 +52,10 @@ public class StorageUtils {
             DeviceFile mnt = new DeviceFile("/mnt");
             if (mnt.exists())
                 for (DeviceFile kid : mnt.listFiles())
-                    if (kid.getName().toLowerCase().contains("sd"))
-                        if (kid.canWrite()){
-                            mInternalDrive = kid;
-                            return mInternalDrive;
-                        }
+                    if (kid.getName().toLowerCase().contains("sd") && kid.canWrite()){
+                        mInternalDrive = kid;
+                        return mInternalDrive;
+                    }
 
         } else if (ret.getName().endsWith("1")) {
             DeviceFile sdcard0 = new DeviceFile(ret.getPath().substring(0, ret.getPath().length() - 1) + "0");
@@ -58,12 +65,11 @@ public class StorageUtils {
         return mInternalDrive;
     }
 
+    // Code from StackOverflow: http://stackoverflow.com/questions/9340332/how-can-i-get-the-list-of-mounted-external-storage-of-android-device/19982338#19982338
     public static DeviceFile getExternalMemoryDrive(Context ctx)
     {
-        if (mExternalDrive != null){
-            if (mExternalDrive.exists()){
-                return mExternalDrive;
-            }
+        if (mExternalDrive != null && mExternalDrive.exists()){
+            return mExternalDrive;
         }
 
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -86,11 +92,11 @@ public class StorageUtils {
 
         }
 
-        DeviceFile mDaddy = getInternalMemoryDrive().getParent();
-        while(mDaddy.getDepth() > 2)
-            mDaddy = mDaddy.getParent();
-        Log.d(TAG, "traversing root path " + mDaddy.getPath());
-        for (DeviceFile kid : mDaddy.listFiles()) {
+        DeviceFile parent = getInternalMemoryDrive().getParent();
+        while(parent.getDepth() > 2)
+            parent = parent.getParent();
+        Log.d(TAG, "traversing root path " + parent.getPath());
+        for (DeviceFile kid : parent.listFiles()) {
             Log.d(TAG, "  > " + kid.getPath() + " : " + (kid.canWrite()?"writable":"not writable!"));
             if ((kid.getName().toLowerCase().contains("ext") || kid.getName().toLowerCase().contains("sdcard1"))
                     && !kid.getPath().equals(getInternalMemoryDrive().getPath())
@@ -128,6 +134,28 @@ public class StorageUtils {
         }
 
         return list;
+    }
+
+
+    public static String readFileFromAssets(Context ctx, String filename) {
+        String content = null;
+        InputStream is = null;
+        try {
+            is = ctx.getResources().getAssets().open(filename);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            content = new String(buffer, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            Mint.logException(e);
+            return null;
+        }
+        finally {
+            try {
+                if (is != null) { is.close(); }
+            } catch (IOException e) { /* Pass */ }
+        }
+        return content;
     }
 
 }

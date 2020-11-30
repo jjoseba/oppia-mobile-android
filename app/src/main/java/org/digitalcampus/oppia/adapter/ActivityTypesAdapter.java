@@ -3,13 +3,14 @@ package org.digitalcampus.oppia.adapter;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.appcompat.widget.AppCompatImageButton;
+import androidx.core.graphics.BlendModeColorFilterCompat;
+import androidx.core.graphics.BlendModeCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.digitalcampus.mobile.learning.R;
@@ -17,7 +18,7 @@ import org.digitalcampus.oppia.model.ActivityType;
 
 import java.util.List;
 
-public class ActivityTypesAdapter extends RecyclerView.Adapter<ActivityTypesAdapter.ViewHolder> {
+public class ActivityTypesAdapter extends RecyclerView.Adapter<ActivityTypesAdapter.ActivityTypesViewHolder> {
 
 
     private List<ActivityType> activityTypes;
@@ -31,38 +32,32 @@ public class ActivityTypesAdapter extends RecyclerView.Adapter<ActivityTypesAdap
     }
 
     @Override
-    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public ActivityTypesViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
 
         View contactView = LayoutInflater.from(context).inflate(R.layout.row_activity_type, parent, false);
 
         // Return a new holder instance
-        ViewHolder viewHolder = new ViewHolder(contactView);
-        return viewHolder;
+        return new ActivityTypesViewHolder(contactView);
     }
 
 
     @Override
-    public void onBindViewHolder(final ViewHolder holder, final int position2) {
+    public void onBindViewHolder(final ActivityTypesViewHolder holder, final int position2) {
 
         final ActivityType activityType = getItemAtPosition(holder.getAdapterPosition());
 
         holder.tvActivityType.setText(activityType.getName());
         holder.tvActivityType.setTextColor(activityType.getColor());
-        holder.imgShowHide.getBackground().setColorFilter(activityType.getColor(), PorterDuff.Mode.SRC_ATOP);
+        holder.imgShowHide.getBackground().setColorFilter(BlendModeColorFilterCompat.createBlendModeColorFilterCompat(activityType.getColor(), BlendModeCompat.SRC_OVER));
         if (activityType.isEnabled()) {
             holder.imgShowHide.setImageResource(R.drawable.ic_eye_show);
-//            holder.imgShowHide.setBackgroundResource(android.R.drawable.btn_default);
             holder.imgShowHide.getBackground().setAlpha(255);
-            holder.imgShowHide.setColorFilter(Color.WHITE);
-//            holder.imgShowHide.setBackgroundColor(activityType.getColor());
+            holder.imgShowHide.setColorFilter(BlendModeColorFilterCompat.createBlendModeColorFilterCompat(Color.WHITE, BlendModeCompat.SRC_ATOP));
         } else {
             holder.imgShowHide.setImageResource(R.drawable.ic_eye_hide);
             holder.imgShowHide.getBackground().setAlpha(0);
-            holder.imgShowHide.setColorFilter(activityType.getColor());
-//            holder.imgShowHide.setBackgroundDrawable(null);
+            holder.imgShowHide.setColorFilter(BlendModeColorFilterCompat.createBlendModeColorFilterCompat(activityType.getColor(), BlendModeCompat.SRC_ATOP));
         }
-
-
     }
 
     @Override
@@ -75,31 +70,25 @@ public class ActivityTypesAdapter extends RecyclerView.Adapter<ActivityTypesAdap
     }
 
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public class ActivityTypesViewHolder extends RecyclerView.ViewHolder {
 
         private final TextView tvActivityType;
         private final AppCompatImageButton imgShowHide;
-        private View rootView;
 
-        public ViewHolder(View itemView) {
+        public ActivityTypesViewHolder(View itemView) {
 
             super(itemView);
 
             tvActivityType = itemView.findViewById(R.id.tv_activity_type);
             imgShowHide = itemView.findViewById(R.id.img_show_hide);
 
-            rootView = itemView;
+            itemView.setOnClickListener(v -> {
+                ActivityType activityType = getItemAtPosition(getAdapterPosition());
+                activityType.setEnabled(!activityType.isEnabled());
+                notifyDataSetChanged();
 
-            rootView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ActivityType activityType = getItemAtPosition(getAdapterPosition());
-                    activityType.setEnabled(!activityType.isEnabled());
-                    notifyDataSetChanged();
-
-                    if (itemClickListener != null) {
-                        itemClickListener.onItemClick(getAdapterPosition(), activityType.getType(), activityType.isEnabled());
-                    }
+                if (itemClickListener != null) {
+                    itemClickListener.onItemClick(getAdapterPosition(), activityType.getType(), activityType.isEnabled());
                 }
             });
         }

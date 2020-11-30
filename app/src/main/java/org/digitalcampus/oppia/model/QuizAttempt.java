@@ -17,18 +17,23 @@
 
 package org.digitalcampus.oppia.model;
 
+import android.content.Context;
 import android.text.TextUtils;
 
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.mobile.learning.R;
+import org.digitalcampus.oppia.utils.DateUtils;
 import org.joda.time.DateTime;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class QuizAttempt {
+public class QuizAttempt implements Serializable {
 
 	public static final String TAG = QuizAttempt.class.getSimpleName();
-	
+	public static final String TYPE_QUIZ = "quiz";
+	public static final String TYPE_FEEDBACK = "feedback";
+
 	private DateTime datetime;
 	private long id;
 	private String data;
@@ -42,6 +47,12 @@ public class QuizAttempt {
 	private User user;
 	private String event;
     private int points;
+    private long timetaken;
+    private String type;
+
+    private String courseTitle;
+    private String quizTitle;
+    private String sectionTitle;
 
 	public DateTime getDatetime() {
 		return datetime;
@@ -50,9 +61,13 @@ public class QuizAttempt {
 	public void setDatetime(DateTime datetime) {
 		this.datetime = datetime;
 	}
-	
+
+	public void setDateTimeFromString(String date) {
+		this.datetime = DateUtils.DATETIME_FORMAT.parseDateTime(date);
+	}
+
 	public String getDateTimeString() {
-		return MobileLearning.DATETIME_FORMAT.print(datetime);
+		return DateUtils.DATETIME_FORMAT.print(datetime);
 	}
 	
 	public long getId() {
@@ -110,6 +125,10 @@ public class QuizAttempt {
 	public float getScoreAsPercent(){
 		return this.score*100/this.maxscore;
 	}
+
+	public String getScorePercentLabel(){
+		return Math.round(getScoreAsPercent()) + "%";
+	}
 	
 	public void setScore(float score) {
 		this.score = score;
@@ -164,5 +183,55 @@ public class QuizAttempt {
     public void setPoints(int points) {
         this.points = points;
     }
-	
+
+	public long getTimetaken() {
+		return timetaken;
+	}
+
+	public void setTimetaken(long timetaken) {
+		this.timetaken = timetaken;
+	}
+
+	public String getHumanTimetaken(){
+		return String.format("%d min %ds", timetaken/60, timetaken % 60 );
+	}
+
+	public String getCourseTitle() {
+		return courseTitle;
+	}
+
+	public void setCourseTitle(String courseTitle) {
+		this.courseTitle = courseTitle;
+	}
+
+	public String getQuizTitle() {
+		return quizTitle;
+	}
+
+	public void setQuizTitle(String quizTitle) {
+		this.quizTitle = quizTitle;
+	}
+
+	public String getSectionTitle() {
+		return sectionTitle;
+	}
+
+	public void setSectionTitle(String sectionTitle) {
+		this.sectionTitle = sectionTitle;
+	}
+
+	public String getDisplayTitle(Context ctx){
+	    if (sectionTitle == null || quizTitle == null){
+	        return ctx.getString(R.string.quiz_attempts_unknown_quiz);
+        }
+	    return sectionTitle + " > " + quizTitle;
+    }
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
 }

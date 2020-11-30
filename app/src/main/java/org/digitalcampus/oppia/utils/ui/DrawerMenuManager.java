@@ -18,35 +18,35 @@
 package org.digitalcampus.oppia.utils.ui;
 
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.Toolbar;
-import androidx.drawerlayout.widget.DrawerLayout;
-
 import com.google.android.material.navigation.NavigationView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.AboutActivity;
+import org.digitalcampus.oppia.activity.ActivityLogActivity;
 import org.digitalcampus.oppia.activity.AppActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.activity.SyncActivity;
 import org.digitalcampus.oppia.activity.TagSelectActivity;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
 public class DrawerMenuManager {
 
@@ -58,6 +58,7 @@ public class DrawerMenuManager {
 
     private NavigationView navigationView;
     private ActionBarDrawerToggle drawerToggle;
+    private DrawerLayout drawerLayout;
     private Map<Integer, MenuOption> customOptions = new HashMap<>();
 
     public DrawerMenuManager(AppActivity act) {
@@ -67,7 +68,7 @@ public class DrawerMenuManager {
     public void initializeDrawer() {
         // Initializing Drawer Layout and ActionBarToggle
         final Toolbar toolbar = drawerAct.findViewById(R.id.toolbar);
-        final DrawerLayout drawerLayout = drawerAct.findViewById(R.id.drawer);
+        drawerLayout = drawerAct.findViewById(R.id.drawer);
         navigationView = drawerAct.findViewById(R.id.navigation_view);
 
         if (drawerLayout == null || navigationView == null) return;
@@ -76,16 +77,13 @@ public class DrawerMenuManager {
                 SessionManager.getUserDisplayName(drawerAct));
         ((TextView) headerView.findViewById(R.id.drawer_username)).setText(
                 SessionManager.getUsername(drawerAct));
-        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
-            @Override
-            public boolean onNavigationItemSelected(MenuItem menuItem) {
-                boolean result = onOptionsItemSelected(menuItem);
-                if (result) {
-                    menuItem.setChecked(false);
-                    drawerLayout.closeDrawers();
-                }
-                return result;
+        navigationView.setNavigationItemSelectedListener(menuItem -> {
+            boolean result = onOptionsItemSelected(menuItem);
+            if (result) {
+                menuItem.setChecked(false);
+                drawerLayout.closeDrawers();
             }
+            return result;
         });
 
         drawerToggle = new ActionBarDrawerToggle(drawerAct, drawerLayout, toolbar, R.string.open, R.string.close);
@@ -93,17 +91,14 @@ public class DrawerMenuManager {
         drawerToggle.setDrawerIndicatorEnabled(true);
         drawerLayout.addDrawerListener(drawerToggle);
         drawerToggle.syncState();
+
     }
 
-    public void onPrepareOptionsMenu(Menu menu, int currentOption) {
-        this.onPrepareOptionsMenu(menu, currentOption, null);
+    public void onPrepareOptionsMenu(Map<Integer, MenuOption> options) {
+        this.onPrepareOptionsMenu(null, options);
     }
 
-    public void onPrepareOptionsMenu(Menu menu, Map<Integer, MenuOption> options) {
-        this.onPrepareOptionsMenu(menu, null, options);
-    }
-
-    public void onPrepareOptionsMenu(Menu menu, Integer currentOption, Map<Integer, MenuOption> options) {
+    public void onPrepareOptionsMenu(Integer currentOption, Map<Integer, MenuOption> options) {
 
         if (options != null)
             this.customOptions = options;
@@ -123,13 +118,13 @@ public class DrawerMenuManager {
         }
 
         SharedPreferences prefs = drawerAct.getPrefs();
-        itemSettings.setVisible(MobileLearning.MENU_ALLOW_SETTINGS);
-        itemCourseDownload.setVisible(prefs.getBoolean(PrefsActivity.PREF_DOWNLOAD_ENABLED, MobileLearning.MENU_ALLOW_COURSE_DOWNLOAD));
-        itemLanguageDialog.setVisible(customOptions.containsKey(R.id.menu_language) && prefs.getBoolean(PrefsActivity.PREF_CHANGE_LANGUAGE_ENABLED, MobileLearning.MENU_ALLOW_LANGUAGE));
-        itemSync.setVisible(MobileLearning.MENU_ALLOW_SYNC);
+        itemSettings.setVisible(App.MENU_ALLOW_SETTINGS);
+        itemCourseDownload.setVisible(prefs.getBoolean(PrefsActivity.PREF_DOWNLOAD_ENABLED, App.MENU_ALLOW_COURSE_DOWNLOAD));
+        itemLanguageDialog.setVisible(customOptions.containsKey(R.id.menu_language) && prefs.getBoolean(PrefsActivity.PREF_CHANGE_LANGUAGE_ENABLED, App.MENU_ALLOW_LANGUAGE));
+        itemSync.setVisible(App.MENU_ALLOW_SYNC);
     }
 
-    public void onPostCreate(Bundle savedInstanceState) {
+    public void onPostCreate() {
         // Sync the toggle state after onRestoreInstanceState has occurred.
         drawerToggle.syncState();
     }
@@ -143,24 +138,20 @@ public class DrawerMenuManager {
         if (item.isChecked()) return false;
 
         final int itemId = item.getItemId();
-        AdminSecurityManager.checkAdminPermission(drawerAct, itemId, new AdminSecurityManager.AuthListener() {
-            public void onPermissionGranted() {
-                // Check if the option has custom manager
-                if (customOptions.containsKey(itemId)) {
-                    customOptions.get(itemId).onOptionSelected();
-                } else if (itemId == R.id.menu_download) {
-                    launchIntentForActivity(TagSelectActivity.class);
-                } else if (itemId == R.id.menu_about) {
-                    launchIntentForActivity(AboutActivity.class);
-//                } else if (itemId == R.id.menu_scorecard) {
-//                    launchIntentForActivity(ScorecardActivity.class);
-//                } else if (itemId == R.id.menu_search) {
-//                    launchIntentForActivity(SearchActivity.class);
-                } else if (itemId == R.id.menu_settings) {
-                    launchIntentForActivity(PrefsActivity.class);
-                } else if (itemId == R.id.menu_sync) {
-                    launchIntentForActivity(SyncActivity.class);
-                }
+        AdminSecurityManager.with(drawerAct).checkAdminPermission(itemId, () -> {
+            // Check if the option has custom manager
+            if (customOptions.containsKey(itemId)) {
+                customOptions.get(itemId).onOptionSelected();
+            } else if (itemId == R.id.menu_download) {
+                launchIntentForActivity(TagSelectActivity.class);
+            } else if (itemId == R.id.menu_activitylog) {
+                launchIntentForActivity(ActivityLogActivity.class);
+            } else if (itemId == R.id.menu_about) {
+                launchIntentForActivity(AboutActivity.class);
+            } else if (itemId == R.id.menu_settings) {
+                launchIntentForActivity(PrefsActivity.class);
+            } else if (itemId == R.id.menu_sync) {
+                launchIntentForActivity(SyncActivity.class);
             }
         });
 
@@ -180,13 +171,12 @@ public class DrawerMenuManager {
         builder.setCancelable(false);
         builder.setTitle(R.string.logout);
         builder.setMessage(R.string.logout_confirm);
-        builder.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                drawerAct.logoutAndRestartApp();
-            }
-        });
+        builder.setPositiveButton(R.string.yes, (dialog, which) -> drawerAct.logoutAndRestartApp());
         builder.setNegativeButton(R.string.no, null);
         builder.show();
     }
 
+    public void close() {
+        drawerLayout.closeDrawer(GravityCompat.START);
+    }
 }

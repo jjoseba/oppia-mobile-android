@@ -23,7 +23,6 @@ import android.content.SharedPreferences.Editor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,8 +39,7 @@ import com.splunk.mint.Mint;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.CourseActivity;
-import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.Tracker;
 import org.digitalcampus.oppia.gamification.GamificationEngine;
 import org.digitalcampus.oppia.gamification.GamificationServiceDelegate;
@@ -54,11 +52,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
-public class ResourceWidget extends WidgetFactory {
+public class ResourceWidget extends BaseWidget {
 
 	public static final String TAG = ResourceWidget.class.getSimpleName();
 
@@ -66,6 +64,12 @@ public class ResourceWidget extends WidgetFactory {
 	private static final String PROPERTY_RESOURCE_VIEWING = "Resource_Viewing";
     private static final String PROPERTY_RESOURCE_STARTTIME = "Resource_StartTime";
     private static final String PROPERTY_RESOURCE_FILENAME = "Resource_FileName";
+
+    private static final String STR_WIDGET = "widget_";
+	private static final String STR_ACT_STARTTIME = "_Activity_StartTime";
+	private static final String STR_RESOURCE_VIEWING = "_Resource_Viewing";
+	private static final String STR_RESOURCE_STARTTIME = "_Resource_StartTime";
+	private static final String STR_RESOURCE_FILENAME = "_Resource_FileName";
 
 	private boolean resourceViewing = false;
 	private long resourceStartTime;
@@ -90,15 +94,14 @@ public class ResourceWidget extends WidgetFactory {
 	@SuppressWarnings("unchecked")
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		prefs = PreferenceManager.getDefaultSharedPreferences(super.getActivity());
 		course = (Course) getArguments().getSerializable(Course.TAG);
 		activity = (org.digitalcampus.oppia.model.Activity) getArguments().getSerializable(org.digitalcampus.oppia.model.Activity.TAG);
 		this.setIsBaseline(getArguments().getBoolean(CourseActivity.BASELINE_TAG));
 
 		View vv = inflater.inflate(R.layout.widget_resource, container, false);
 		vv.setId(activity.getActId());
-		if ((savedInstanceState != null) && (savedInstanceState.getSerializable(WidgetFactory.WIDGET_CONFIG) != null)){
-			setWidgetConfig((HashMap<String, Object>) savedInstanceState.getSerializable(WidgetFactory.WIDGET_CONFIG));
+		if ((savedInstanceState != null) && (savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG) != null)){
+			setWidgetConfig((HashMap<String, Object>) savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG));
 		}
 		return vv;
 	}
@@ -106,19 +109,18 @@ public class ResourceWidget extends WidgetFactory {
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
-		outState.putSerializable(WidgetFactory.WIDGET_CONFIG, this.getWidgetConfig());
+		outState.putSerializable(BaseWidget.WIDGET_CONFIG, (Serializable) this.getWidgetConfig());
 	}
 	
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) { 
 		super.onActivityCreated(savedInstanceState);
 
-		String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
 		LinearLayout ll = getView().findViewById(R.id.widget_resource_object);
-		String fileUrl = course.getLocation() + activity.getLocation(lang);
+		String fileUrl = course.getLocation() + activity.getLocation(prefLang);
 
 		// show description if any
-		String desc = activity.getDescription(lang);
+		String desc = activity.getDescription(prefLang);
 		TextView descTV = getView().findViewById(R.id.widget_resource_description);
 		if ((desc != null) && desc.length() > 0){
 			descTV.setText(desc);
@@ -134,7 +136,7 @@ public class ResourceWidget extends WidgetFactory {
 			ImageView iv = new ImageView(super.getActivity());
 			Bitmap myBitmap = BitmapFactory.decodeFile(fileUrl);
 			iv.setImageBitmap(myBitmap);
-			LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+			LayoutParams lp = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 			ll.addView(iv, lp);
 			iv.setTag(file);
 			iv.setOnClickListener(orcl);
@@ -153,10 +155,10 @@ public class ResourceWidget extends WidgetFactory {
 	public void onPause(){
 		super.onPause();
 		Editor editor = prefs.edit();
-		editor.putLong("widget_"+activity.getDigest()+"_Activity_StartTime", this.getStartTime());
-		editor.putBoolean("widget_"+activity.getDigest()+"_Resource_Viewing", this.isResourceViewing());
-		editor.putLong("widget_"+activity.getDigest()+"_Resource_StartTime", this.getResourceStartTime());
-		editor.putString("widget_"+activity.getDigest()+"_Resource_FileName", this.getResourceFileName());
+		editor.putLong(STR_WIDGET+activity.getDigest()+STR_ACT_STARTTIME, this.getStartTime());
+		editor.putBoolean(STR_WIDGET+activity.getDigest()+STR_RESOURCE_VIEWING, this.isResourceViewing());
+		editor.putLong(STR_WIDGET+activity.getDigest()+STR_RESOURCE_STARTTIME, this.getResourceStartTime());
+		editor.putString(STR_WIDGET+activity.getDigest()+STR_RESOURCE_FILENAME, this.getResourceFileName());
 		editor.apply();
 	}
 	
@@ -164,17 +166,17 @@ public class ResourceWidget extends WidgetFactory {
 	public void onResume() {
 		super.onResume();
 		// check to see if the vars are stored in shared prefs
-		if(prefs.contains("widget_"+activity.getDigest()+"_Activity_StartTime")){
-			this.setStartTime(prefs.getLong("widget_"+activity.getDigest()+"_Activity_StartTime", System.currentTimeMillis()/1000));
+		if(prefs.contains(STR_WIDGET+activity.getDigest()+STR_ACT_STARTTIME)){
+			this.setStartTime(prefs.getLong(STR_WIDGET+activity.getDigest()+STR_ACT_STARTTIME, System.currentTimeMillis()/1000));
 		}
-		if(prefs.contains("widget_"+activity.getDigest()+"_Resource_Viewing")){
-			this.setResourceViewing(prefs.getBoolean("widget_"+activity.getDigest()+"_Resource_Viewing", false));
+		if(prefs.contains(STR_WIDGET+activity.getDigest()+STR_RESOURCE_VIEWING)){
+			this.setResourceViewing(prefs.getBoolean(STR_WIDGET+activity.getDigest()+STR_RESOURCE_VIEWING, false));
 		}
-		if(prefs.contains("widget_"+activity.getDigest()+"_Resource_StartTime")){
-			this.setResourceStartTime(prefs.getLong("widget_"+activity.getDigest()+"_Resource_StartTime", System.currentTimeMillis()/1000));
+		if(prefs.contains(STR_WIDGET+activity.getDigest()+STR_RESOURCE_STARTTIME)){
+			this.setResourceStartTime(prefs.getLong(STR_WIDGET+activity.getDigest()+STR_RESOURCE_STARTTIME, System.currentTimeMillis()/1000));
 		}
-		if(prefs.contains("widget_"+activity.getDigest()+"_Resource_FileName")){
-			this.setResourceFileName(prefs.getString("widget_"+activity.getDigest()+"_Resource_FileName", ""));
+		if(prefs.contains(STR_WIDGET+activity.getDigest()+STR_RESOURCE_FILENAME)){
+			this.setResourceFileName(prefs.getString(STR_WIDGET+activity.getDigest()+STR_RESOURCE_FILENAME, ""));
 		}
 		
 		if (isResourceViewing()) {
@@ -185,7 +187,7 @@ public class ResourceWidget extends WidgetFactory {
 		Map<String,?> keys = prefs.getAll();
 
 		for(Map.Entry<String,?> entry : keys.entrySet()){
-			if (entry.getKey().startsWith("widget_"+activity.getDigest())){
+			if (entry.getKey().startsWith(STR_WIDGET+activity.getDigest())){
 				editor.remove(entry.getKey());
 			}            
 		 }
@@ -204,9 +206,7 @@ public class ResourceWidget extends WidgetFactory {
 				data.put("resource", "viewed");
 				data.put("resourcefile", getResourceFileName());
 				data.put("timetaken", timeTaken);
-				String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault()
-						.getLanguage());
-				data.put("lang", lang);
+				data.put("lang", prefLang);
 			} catch (JSONException e) {
 				Mint.logException(e);
 				Log.d(TAG, "JSONException", e);
@@ -238,7 +238,7 @@ public class ResourceWidget extends WidgetFactory {
 	@Override
 	public void saveTracker(){
 		long timetaken = this.getSpentTime();
-		if (activity == null || timetaken < MobileLearning.RESOURCE_READ_TIME) {
+		if (activity == null || timetaken < App.RESOURCE_READ_TIME) {
 			return;
 		}
 
@@ -250,7 +250,7 @@ public class ResourceWidget extends WidgetFactory {
 	@Override
 	public HashMap<String, Object> getWidgetConfig() {
 		HashMap<String, Object> config = new HashMap<>();
-		config.put(WidgetFactory.PROPERTY_ACTIVITY_STARTTIME, this.getStartTime());
+		config.put(BaseWidget.PROPERTY_ACTIVITY_STARTTIME, this.getStartTime());
 		config.put(PROPERTY_RESOURCE_VIEWING, this.isResourceViewing());
 		config.put(PROPERTY_RESOURCE_STARTTIME, this.getResourceStartTime());
 		config.put(PROPERTY_RESOURCE_FILENAME, this.getResourceFileName());
@@ -259,8 +259,8 @@ public class ResourceWidget extends WidgetFactory {
 
 	@Override
 	public void setWidgetConfig(HashMap<String, Object> config) {
-		if (config.containsKey(WidgetFactory.PROPERTY_ACTIVITY_STARTTIME)){
-			this.setStartTime((Long) config.get(WidgetFactory.PROPERTY_ACTIVITY_STARTTIME));
+		if (config.containsKey(BaseWidget.PROPERTY_ACTIVITY_STARTTIME)){
+			this.setStartTime((Long) config.get(BaseWidget.PROPERTY_ACTIVITY_STARTTIME));
 		}
 		if (config.containsKey(PROPERTY_RESOURCE_VIEWING)){
 			this.setResourceViewing((Boolean) config.get(PROPERTY_RESOURCE_VIEWING));

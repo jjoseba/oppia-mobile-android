@@ -1,13 +1,15 @@
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
-import android.preference.PreferenceManager;
+import android.net.NetworkInfo;
+import androidx.preference.PreferenceManager;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.api.MockApiEndpoint;
+import org.digitalcampus.oppia.api.MockedApiEndpointTaskTest;
 import org.digitalcampus.oppia.task.FetchServerInfoTask;
 import org.junit.After;
 import org.junit.Before;
@@ -25,17 +27,16 @@ import okhttp3.mockwebserver.MockWebServer;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 
 @RunWith(AndroidJUnit4.class)
-public class FetchServerInfoTest {
+public class FetchServerInfoTest extends MockedApiEndpointTaskTest {
 
     private static final String VALID_SERVERINFO_RESPONSE = "responses/response_200_serverinfo.json";
 
     private Context context;
     private SharedPreferences prefs;
-    private MockWebServer mockServer;
-
-
 
     @Before
     public void setUp() throws Exception {
@@ -54,34 +55,10 @@ public class FetchServerInfoTest {
         mockServer.shutdown();
     }
 
-    private void startServer(int responseCode, String responseBody, int timeoutDelay){
-        try {
-            mockServer = new MockWebServer();
-            MockResponse response = new MockResponse();
-            response.setResponseCode(responseCode);
-            if (responseBody!=null) { response.setBody(responseBody); }
-            if (timeoutDelay > 0){
-                response.setBodyDelay(timeoutDelay, TimeUnit.MILLISECONDS);
-
-            }
-            mockServer.enqueue(response);
-            mockServer.start();
-
-        }catch(IOException ioe) {
-            ioe.printStackTrace();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    }
-
-    private void startServer(int responseCode, String responseBody){
-        startServer(responseCode, responseBody, 0);
-    }
-
-    private void fetchServerInfoSync(Context context){
+    private void fetchServerInfoSync(Context context, ConnectivityManager manager){
         final CountDownLatch signal = new CountDownLatch(1);  //Control AsyncTask sincronization for testing
 
-        FetchServerInfoTask task = new FetchServerInfoTask(context, new MockApiEndpoint(mockServer));
+        FetchServerInfoTask task = new FetchServerInfoTask(context, new MockApiEndpoint(mockServer), manager);
         task.setListener(new FetchServerInfoTask.FetchServerInfoListener() {
             @Override
             public void onError(String message) {
@@ -114,7 +91,7 @@ public class FetchServerInfoTest {
 
         startServer(200, Utils.FileUtils.getStringFromFile(
                 InstrumentationRegistry.getInstrumentation().getContext(), VALID_SERVERINFO_RESPONSE));
-        fetchServerInfoSync(context);
+        fetchServerInfoSync(context, getAvailableConnectivityManager());
 
         assertTrue(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
         assertTrue(prefs.getBoolean(PrefsActivity.PREF_SERVER_VALID, false));
@@ -125,7 +102,7 @@ public class FetchServerInfoTest {
     @Test
     public void fetchServerInfo_malformedJSON() {
         startServer(200, "{\"name\":wrongjson }");
-        fetchServerInfoSync(context);
+        fetchServerInfoSync(context, getAvailableConnectivityManager());
 
         assertTrue(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
         assertFalse(prefs.getBoolean(PrefsActivity.PREF_SERVER_VALID, false));
@@ -134,7 +111,7 @@ public class FetchServerInfoTest {
     @Test
     public void fetchServerInfo_emptyResponse() {
         startServer(200, "");
-        fetchServerInfoSync(context);
+        fetchServerInfoSync(context, getAvailableConnectivityManager());
 
         assertTrue(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
         assertFalse(prefs.getBoolean(PrefsActivity.PREF_SERVER_VALID, false));
@@ -148,7 +125,7 @@ public class FetchServerInfoTest {
         Context ctx = Mockito.mock(Context.class);
         Mockito.when (ctx.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(connectivityManager);
 
-        fetchServerInfoSync(ctx);
+        fetchServerInfoSync(ctx, null);
 
         assertFalse(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
     }
@@ -156,7 +133,7 @@ public class FetchServerInfoTest {
     @Test
     public void fetchServerInfo_notfound(){
         startServer(404, null);
-        fetchServerInfoSync(context);
+        fetchServerInfoSync(context, getAvailableConnectivityManager());
 
         assertTrue(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
         assertFalse(prefs.getBoolean(PrefsActivity.PREF_SERVER_VALID, false));
@@ -168,8 +145,9 @@ public class FetchServerInfoTest {
         int timeoutConn = Integer.parseInt(prefs.getString(PrefsActivity.PREF_SERVER_TIMEOUT_CONN,
                 context.getString(R.string.prefServerTimeoutConnectionDefault)));
         startServer(200, Utils.FileUtils.getStringFromFile(InstrumentationRegistry.getInstrumentation().getContext(), VALID_SERVERINFO_RESPONSE), timeoutConn+100);
-        fetchServerInfoSync(context);
+        fetchServerInfoSync(context, getAvailableConnectivityManager());
 
-        assertFalse(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
+        assertTrue(prefs.getBoolean(PrefsActivity.PREF_SERVER_CHECKED, false));
+        assertFalse(prefs.getBoolean(PrefsActivity.PREF_SERVER_VALID, false));
     }
 }

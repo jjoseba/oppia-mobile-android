@@ -17,39 +17,52 @@
 
 package org.digitalcampus.oppia.fragments;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import com.badoualy.stepperindicator.StepperIndicator;
 
 import androidx.appcompat.app.AlertDialog;
 
 import org.digitalcampus.mobile.learning.BuildConfig;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.MainActivity;
+import org.digitalcampus.oppia.activity.ViewDigestActivity;
 import org.digitalcampus.oppia.activity.WelcomeActivity;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.api.ApiEndpoint;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.application.Tracker;
 import org.digitalcampus.oppia.gamification.GamificationEngine;
-import org.digitalcampus.oppia.listener.SubmitListener;
+import org.digitalcampus.oppia.model.CustomField;
+import org.digitalcampus.oppia.model.CustomFieldsRepository;
 import org.digitalcampus.oppia.model.User;
 import org.digitalcampus.oppia.task.Payload;
 import org.digitalcampus.oppia.task.RegisterTask;
 import org.digitalcampus.oppia.utils.UIUtils;
-import org.digitalcampus.oppia.utils.ui.ValidableTextInputLayout;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.digitalcampus.oppia.utils.ui.fields.CustomFieldsUIManager;
+import org.digitalcampus.oppia.utils.ui.fields.SteppedFormUIManager;
+import org.digitalcampus.oppia.utils.ui.fields.ValidableField;
+import org.digitalcampus.oppia.utils.ui.fields.ValidableTextInputLayout;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
-public class RegisterFragment extends AppFragment implements SubmitListener, RegisterTask.RegisterListener {
+import javax.inject.Inject;
+
+public class RegisterFragment extends AppFragment implements RegisterTask.RegisterListener {
 
 
 	private ValidableTextInputLayout usernameField;
@@ -61,12 +74,33 @@ public class RegisterFragment extends AppFragment implements SubmitListener, Reg
 	private ValidableTextInputLayout jobTitleField;
 	private ValidableTextInputLayout organisationField;
 	private ValidableTextInputLayout phoneNoField;
-	private List<ValidableTextInputLayout> fields;
+	private HashMap<String, ValidableField> fields = new HashMap<>();
+
+	private LinearLayout customFieldsContainer;
+	private List<CustomField> profileCustomFields;
+
+	private LinearLayout steppedFieldsContainer;
+	private CustomFieldsUIManager fieldsManager;
+	private StepperIndicator stepperIndicator;
+	private SteppedFormUIManager stepsManager;
+	private TextView stepDescription;
 
 	private Button registerButton;
+	private Button nextStepButton;
+	private Button prevStepButton;
 	private Button loginButton;
 	private ProgressDialog pDialog;
-	
+	private View stepperContainer;
+	private View loginContainer;
+
+
+	@Inject
+	CustomFieldsRepository customFieldsRepo;
+
+	@Inject
+	ApiEndpoint apiEndpoint;
+
+
 	public static RegisterFragment newInstance() {
 	    return new RegisterFragment();
 	}
@@ -77,128 +111,178 @@ public class RegisterFragment extends AppFragment implements SubmitListener, Reg
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		View vv = inflater.inflate(R.layout.fragment_register, container, false);
-		usernameField = vv.findViewById(R.id.register_form_username_field);
-		emailField = vv.findViewById(R.id.register_form_email_field);
-		passwordField = vv.findViewById(R.id.register_form_password_field);
-		passwordAgainField = vv.findViewById(R.id.register_form_password_again_field);
-		firstnameField = vv.findViewById(R.id.register_form_firstname_field);
-		lastnameField = vv.findViewById(R.id.register_form_lastname_field);
-		jobTitleField = vv.findViewById(R.id.register_form_jobtitle_field);
-		organisationField = vv.findViewById(R.id.register_form_organisation_field);
-		phoneNoField = vv.findViewById(R.id.register_form_phoneno_field);
-		registerButton = vv.findViewById(R.id.register_btn);
-		loginButton = vv.findViewById(R.id.action_login_btn);
+		View layout = inflater.inflate(R.layout.fragment_register, container, false);
+		usernameField = layout.findViewById(R.id.register_form_username_field);
+		emailField = layout.findViewById(R.id.register_form_email_field);
+		passwordField = layout.findViewById(R.id.register_form_password_field);
+		passwordAgainField = layout.findViewById(R.id.register_form_password_again_field);
+		firstnameField = layout.findViewById(R.id.register_form_firstname_field);
+		lastnameField = layout.findViewById(R.id.register_form_lastname_field);
+		jobTitleField = layout.findViewById(R.id.register_form_jobtitle_field);
+		organisationField = layout.findViewById(R.id.register_form_organisation_field);
+		phoneNoField = layout.findViewById(R.id.register_form_phoneno_field);
+		registerButton = layout.findViewById(R.id.register_btn);
+		loginButton = layout.findViewById(R.id.action_login_btn);
+		customFieldsContainer = layout.findViewById(R.id.custom_fields_container);
+		stepperIndicator = layout.findViewById(R.id.stepper_indicator);
+		stepperContainer = layout.findViewById(R.id.frame_stepper_indicator);
+		prevStepButton = layout.findViewById(R.id.prev_btn);
+		nextStepButton = layout.findViewById(R.id.next_btn);
+		loginContainer = layout.findViewById(R.id.login_container);
+		stepDescription = layout.findViewById(R.id.step_description);
+		steppedFieldsContainer = layout.findViewById(R.id.stepped_fields_container);
 
-		fields = Arrays.asList(usernameField, emailField, passwordField, passwordAgainField,
-				firstnameField, lastnameField, jobTitleField, organisationField, phoneNoField);
+		emailField.setCustomValidator(field -> {
+			String email = field.getCleanedValue();
+			if (!TextUtils.isEmpty(email) && !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+				emailField.setErrorEnabled(true);
+				emailField.setError(getString(R.string.error_register_email));
+				return false;
+			}
+			return true;
+		});
 
-		return vv;
+		phoneNoField.setCustomValidator(field -> {
+			String phoneNo = field.getCleanedValue();
+			if ((phoneNo.length() > 0) && (phoneNo.length() < App.PHONENO_MIN_LENGTH)) {
+				phoneNoField.setErrorEnabled(true);
+				phoneNoField.setError(getString(R.string.error_register_no_phoneno));
+				phoneNoField.requestFocus();
+				return false;
+			}
+			return true;
+		});
+
+		passwordField.setCustomValidator(field -> {
+			String password = passwordField.getCleanedValue();
+			String passwordAgain = passwordAgainField.getCleanedValue();
+			return checkPasswordCriteria(password, passwordAgain);
+		});
+
+		usernameField.setCustomValidator(field -> {
+			boolean validValue = !TextUtils.isEmpty(field.getCleanedValue()) && field.getCleanedValue().length() >= App.USERNAME_MIN_CHARACTERS;
+			if (!validValue) {
+				usernameField.setError(getString(R.string.error_register_username_lenght, App.USERNAME_MIN_CHARACTERS));
+			}
+			return validValue;
+		});
+
+		fields = new HashMap<>();
+		fields.put("username", usernameField);
+		fields.put("email", emailField);
+		fields.put("password", passwordField);
+		fields.put("passwordagain", passwordAgainField);
+		fields.put("first_name", firstnameField);
+		fields.put("last_name", lastnameField);
+		fields.put("jobtitle", jobTitleField);
+		fields.put("organisation", organisationField);
+		fields.put("phoneno", phoneNoField);
+
+		return layout;
 	}
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
-		registerButton.setOnClickListener(new View.OnClickListener() {
-			
-			public void onClick(View v) {
-				onRegisterClick();
-			}
-		});
-		loginButton.setOnClickListener(new View.OnClickListener() {
+		getAppComponent().inject(this);
 
-			public void onClick(View v) {
-				WelcomeActivity wa = (WelcomeActivity) RegisterFragment.super.getActivity();
-				wa.switchTab(WelcomeActivity.TAB_LOGIN);
+		profileCustomFields = customFieldsRepo.getAll(getContext());
+		List<CustomField.RegisterFormStep> registerSteps = customFieldsRepo.getRegisterSteps(getContext());
+		fieldsManager = new CustomFieldsUIManager(this.getActivity(), fields, profileCustomFields);
+		fieldsManager.populateAndInitializeFields(customFieldsContainer);
+		if (registerSteps == null || registerSteps.isEmpty()){
+			stepperContainer.setVisibility(View.GONE);
+			loginContainer.setVisibility(View.VISIBLE);
+		}
+		else{
+			stepsManager = new SteppedFormUIManager(stepperIndicator, registerSteps, fieldsManager);
+			stepperContainer.setVisibility(View.VISIBLE);
+			loginContainer.setVisibility(View.GONE);
+			registerButton.setVisibility(View.GONE);
+			nextStepButton.setVisibility(View.VISIBLE);
+			prevStepButton.setVisibility(View.INVISIBLE);
+			stepsManager.initialize(customFieldsContainer, steppedFieldsContainer, stepDescription);
+		}
+
+		registerButton.setOnClickListener(v -> onRegisterClick());
+		nextStepButton.setOnClickListener(v -> nextStep());
+		prevStepButton.setOnClickListener(v -> prevStep());
+		loginButton.setOnClickListener(v -> {
+			WelcomeActivity activity = (WelcomeActivity) RegisterFragment.super.getActivity();
+			if (activity != null){
+				activity.switchTab(WelcomeActivity.TAB_LOGIN);
 			}
+
 		});
-		for (ValidableTextInputLayout field : fields){
+		for (ValidableField field : fields.values()){
 			field.initialize();
 		}
 	}
 
-	public void submitComplete(Payload response) {
-		pDialog.dismiss();
-		if (response.isResult()) {
-			User user = (User) response.getData().get(0);
-            SessionManager.loginUser(getActivity(), user);
-			// registration gamification
-			GamificationEngine gamificationEngine = new GamificationEngine(super.getActivity());
-			gamificationEngine.processEventRegister();
-            //Save the search tracker
-            new Tracker(super.getActivity()).saveRegisterTracker();
-	    	startActivity(new Intent(getActivity(), MainActivity.class));
-	    	super.getActivity().finish();
-		} else {
-			Context ctx = super.getActivity();
-			if (ctx != null){
-				try {
-					JSONObject jo = new JSONObject(response.getResultResponse());
-					UIUtils.showAlert(ctx,R.string.error,jo.getString("error"));
-				} catch (JSONException je) {
-					UIUtils.showAlert(ctx,R.string.error,response.getResultResponse());
-				}
-			}
+	private void nextStep(){
+		if (stepsManager.nextStep()){
+			prevStepButton.setVisibility(View.VISIBLE);
 		}
+		if (stepsManager.isLastStep()){
+			nextStepButton.setVisibility(View.GONE);
+			registerButton.setVisibility(View.VISIBLE);
+		}
+
+	}
+
+	private void prevStep(){
+		if (stepsManager.prevStep()){
+			prevStepButton.setVisibility(View.INVISIBLE);
+		}
+		registerButton.setVisibility(View.GONE);
+		nextStepButton.setVisibility(View.VISIBLE);
 	}
 
 
-
 	public void onRegisterClick() {
-		// get form fields
-		String username = usernameField.getCleanedValue();
-		String email = emailField.getCleanedValue();
-		String password = passwordField.getCleanedValue();
-		String passwordAgain = passwordAgainField.getCleanedValue();
-		String firstname = firstnameField.getCleanedValue();
-		String lastname = lastnameField.getCleanedValue();
-		String phoneNo = phoneNoField.getCleanedValue();
-		String jobTitle = jobTitleField.getCleanedValue();
-		String organisation = organisationField.getCleanedValue();
 
 		boolean valid = true;
-		for (ValidableTextInputLayout field : fields){
-			valid = field.validate() && valid;
+		if (stepsManager == null){
+			// Only validate fields if we are not in a stepped form
+			// (if the form was stepped, we already validated each conditional step)
+			for (ValidableField field : fields.values()){
+				valid = field.validate() && valid;
+			}
+			valid = fieldsManager.validateFields() && valid;
 		}
-
-		// check password length
-		if (password.length() < MobileLearning.PASSWORD_MIN_LENGTH) {
-			passwordField.setErrorEnabled(true);
-			passwordField.setError(getString(R.string.error_register_password,  MobileLearning.PASSWORD_MIN_LENGTH ));
-			passwordField.requestFocus();
-		    return;
-		}
-		
-		// check password match
-		if (!password.equals(passwordAgain)) {
-            passwordField.setErrorEnabled(true);
-            passwordField.setError(getString(R.string.error_register_password_no_match ));
-			passwordField.requestFocus();
-            return;
-		}
-
-		// check phone no
-		if (phoneNo.length() < 8) {
-            phoneNoField.setErrorEnabled(true);
-            phoneNoField.setError(getString(R.string.error_register_no_phoneno ));
-			phoneNoField.requestFocus();
-			return;
+		else{
+			valid = stepsManager.validate();
 		}
 
 		if (valid){
             User u = new User();
-            u.setUsername(username);
-            u.setPassword(password);
-            u.setPasswordAgain(passwordAgain);
-            u.setFirstname(firstname);
-            u.setLastname(lastname);
-            u.setEmail(email);
-            u.setJobTitle(jobTitle);
-            u.setOrganisation(organisation);
-            u.setPhoneNo(phoneNo);
+            u.setUsername(usernameField.getCleanedValue());
+            u.setPassword(passwordField.getCleanedValue());
+            u.setPasswordAgain(passwordAgainField.getCleanedValue());
+            u.setFirstname(firstnameField.getCleanedValue());
+            u.setLastname(lastnameField.getCleanedValue());
+            u.setEmail(emailField.getCleanedValue());
+            u.setJobTitle(jobTitleField.getCleanedValue());
+            u.setOrganisation(organisationField.getCleanedValue());
+            u.setPhoneNo(phoneNoField.getCleanedValue());
+			u.setUserCustomFields(fieldsManager.getCustomFieldValues());
             executeRegisterTask(u);
         }
 
+	}
+
+	private boolean checkPasswordCriteria(String password, String passwordAgain){
+		if (password.length() < App.PASSWORD_MIN_LENGTH) {
+			passwordField.setErrorEnabled(true);
+			passwordField.setError(getString(R.string.error_register_password,  App.PASSWORD_MIN_LENGTH ));
+			return false;
+		}
+		else if (!password.equals(passwordAgain)) {
+			passwordField.setErrorEnabled(true);
+			passwordField.setError(getString(R.string.error_register_password_no_match ));
+			return false;
+		}
+		return true;
 	}
 
 	@Override
@@ -211,7 +295,15 @@ public class RegisterFragment extends AppFragment implements SubmitListener, Reg
 
 		//Save the search tracker
 		new Tracker(super.getActivity()).saveRegisterTracker();
-		startActivity(new Intent(getActivity(), MainActivity.class));
+
+		boolean fromViewDigest = getActivity().getIntent().getBooleanExtra(ViewDigestActivity.EXTRA_FROM_VIEW_DIGEST, false);
+
+		if (fromViewDigest) {
+			getActivity().setResult(Activity.RESULT_OK);
+		} else {
+			startActivity(new Intent(getActivity(), MainActivity.class));
+		}
+
 		super.getActivity().finish();
 	}
 
@@ -236,11 +328,9 @@ public class RegisterFragment extends AppFragment implements SubmitListener, Reg
 			builder.setCancelable(false);
 			builder.setTitle(error);
 			builder.setMessage(R.string.offline_register_confirm);
-			builder.setPositiveButton(R.string.register_offline, new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int which) {
-					u.setOfflineRegister(true);
-					executeRegisterTask(u);
-				}
+			builder.setPositiveButton(R.string.register_offline, (dialog, which) -> {
+				u.setOfflineRegister(true);
+				executeRegisterTask(u);
 			});
 			builder.setNegativeButton(R.string.cancel, null);
 			builder.show();
@@ -259,7 +349,7 @@ public class RegisterFragment extends AppFragment implements SubmitListener, Reg
 		pDialog.show();
 
 		Payload p = new Payload(Arrays.asList(u));
-		RegisterTask rt = new RegisterTask(super.getActivity());
+		RegisterTask rt = new RegisterTask(super.getActivity(), apiEndpoint);
 		rt.setRegisterListener(this);
 		rt.execute(p);
 	}

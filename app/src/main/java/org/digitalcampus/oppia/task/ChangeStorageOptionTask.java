@@ -20,7 +20,7 @@ package org.digitalcampus.oppia.task;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.util.Log;
 
 import com.splunk.mint.Mint;
@@ -63,7 +63,7 @@ public class ChangeStorageOptionTask extends AsyncTask<Payload, DownloadProgress
         StorageAccessStrategy newStrategy = StorageAccessStrategyFactory.createStrategy(storageType);
 
         Log.d(TAG, "Checking if storage is available...");
-        if (!newStrategy.isStorageAvailable(ctx)){
+        if (!newStrategy.isStorageAvailable()){
             resetStrategy(previousStrategy, previousLocation);
             payload.setResult(false);
             payload.setResultResponse(ctx.getString(R.string.error_sdcard));
@@ -95,7 +95,7 @@ public class ChangeStorageOptionTask extends AsyncTask<Payload, DownloadProgress
                 if (!makeDirs){
                     boolean canWrite = destDir.canWrite();
                     Log.d(TAG, "Error creating destination dir " + destPath + ": canWrite=" + canWrite);
-                    throw new Exception("No file created!"); }
+                    throw new IOException("No file created!"); }
             }
             Storage.createNoMediaFile(ctx);
 

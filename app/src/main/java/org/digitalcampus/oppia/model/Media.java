@@ -21,10 +21,11 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Media implements Serializable{
 
@@ -43,7 +44,12 @@ public class Media implements Serializable{
 	public Media(){
 		courses = new ArrayList<>();
 	}
-	
+
+	public Media(String filename, int lenght) {
+		this.filename = filename;
+		this.length = lenght;
+	}
+
 	public String getFilename() {
 		return filename;
 	}
@@ -88,7 +94,7 @@ public class Media implements Serializable{
 		return downloaded;
 	}
 
-	public ArrayList<Course> getCourses(){ return courses; }
+	public List<Course> getCourses(){ return courses; }
 
     //ONLY FOR UI PURPOSES
     private boolean downloading;
@@ -107,7 +113,7 @@ public class Media implements Serializable{
     public static boolean shouldScanMedia(SharedPreferences prefs){
 		long now = System.currentTimeMillis()/1000;
 		long lastScan = prefs.getLong(PrefsActivity.PREF_LAST_MEDIA_SCAN, 0);
-		return (lastScan + MobileLearning.MEDIA_SCAN_TIME_LIMIT <= now);
+		return (lastScan + App.MEDIA_SCAN_TIME_LIMIT <= now);
 	}
 
 	public static void resetMediaScan(SharedPreferences prefs){

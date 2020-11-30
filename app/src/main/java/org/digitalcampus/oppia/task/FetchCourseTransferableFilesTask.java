@@ -3,12 +3,12 @@ package org.digitalcampus.oppia.task;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 
 import com.splunk.mint.Mint;
 
 import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.application.DbHelper;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.exception.InvalidXMLException;
 import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.CourseTransferableFile;
@@ -22,15 +22,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean, List<CourseTransferableFile>> {
+public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean, Void> {
 
     public interface FetchBackupsListener{
         void coursesPendingToInstall(boolean pending);
-        void onFetchComplete(List<CourseTransferableFile> backups);
+        void onFetchComplete(List<CourseTransferableFile> backups, List<CourseTransferableFile> activityLogs);
     }
 
-    FetchBackupsListener listener;
+    private FetchBackupsListener listener;
     private Context ctx;
+    private List<CourseTransferableFile> transferableFiles = new ArrayList<>();
+    private List<CourseTransferableFile> activityLogs = new ArrayList<>();
 
     public FetchCourseTransferableFilesTask(Context ctx) {
         this.ctx = ctx;
@@ -38,19 +40,23 @@ public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean
 
 
     @Override
-    protected List<CourseTransferableFile> doInBackground(Payload... payloads) {
-
-        DbHelper db = DbHelper.getInstance(ctx);
-        ArrayList<CourseTransferableFile> transferableFiles = new ArrayList<>();
-        List<Course> courses = db.getAllCourses();
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+    protected Void doInBackground(Payload... payloads) {
 
         File dir = new File(Storage.getDownloadPath(ctx));
         String[] children = dir.list();
-
         publishProgress(children != null && children.length > 0);
+
+        fetchCourseBackups();
+        fetchMediaFiles();
+        fetchActivityLogs();
+
+        return null;
+    }
+
+    private void fetchCourseBackups(){
+        List<Course> courses = DbHelper.getInstance(ctx).getAllCourses();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
 
         for (Course course : courses){
             File backup = CourseInstall.savedBackupCourse(ctx, course.getShortname());
@@ -78,7 +84,7 @@ public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean
                 try {
                     cxr = new CourseXMLReader(course.getCourseXMLLocation(), course.getCourseId(), ctx);
                     cxr.parse(CourseXMLReader.ParseMode.ONLY_MEDIA);
-                    ArrayList<Media> media = cxr.getMediaResponses().getCourseMedia();
+                    List<Media> media = cxr.getMediaResponses().getCourseMedia();
                     for(Media m: media){
                         courseRelatedMedia.add(m.getFilename());
                     }
@@ -89,10 +95,12 @@ public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean
                 courseBackup.setRelatedMedia(courseRelatedMedia);
             }
         }
+    }
 
+    private void fetchMediaFiles(){
         File mediaPath = new File(Storage.getMediaPath(ctx));
         String[] mediaFiles = mediaPath.list();
-        if (mediaFiles.length > 0){
+        if (mediaFiles != null && mediaFiles.length > 0){
             for (String mediaFile : mediaFiles) {
                 File file = new File(mediaPath, mediaFile);
                 CourseTransferableFile media = new CourseTransferableFile();
@@ -107,8 +115,29 @@ public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean
                 }
             }
         }
+    }
 
-        return transferableFiles;
+    private void fetchActivityLogs(){
+        File activityLogsDir = new File(Storage.getActivityPath(ctx));
+        if (!activityLogsDir.exists()){
+            return;
+        }
+        String[] logs = activityLogsDir.list();
+        if (logs != null && logs.length > 0){
+            for (String filename : logs){
+                File file = new File(activityLogsDir, filename);
+                CourseTransferableFile log = new CourseTransferableFile();
+                log.setFilename(file.getName());
+                log.setFile(file);
+                log.setTitle(filename.substring(0, filename.indexOf('_')));
+                log.setType(CourseTransferableFile.TYPE_ACTIVITY_LOG);
+                log.setTitleFromFilename();
+                log.setFileSize(file.length());
+                log.setShortname("");
+                activityLogs.add(log);
+            }
+        }
+
     }
 
     @Override
@@ -122,10 +151,10 @@ public class FetchCourseTransferableFilesTask extends AsyncTask<Payload, Boolean
     }
 
     @Override
-    protected void onPostExecute(List<CourseTransferableFile> backups) {
+    protected void onPostExecute(Void params) {
         synchronized (this) {
             if (listener != null) {
-                listener.onFetchComplete(backups);
+                listener.onFetchComplete(transferableFiles, activityLogs);
             }
         }
     }

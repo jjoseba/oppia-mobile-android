@@ -26,8 +26,9 @@ import com.splunk.mint.Mint;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.api.ApiEndpoint;
-import org.digitalcampus.oppia.application.DbHelper;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.api.Paths;
+import org.digitalcampus.oppia.database.DbHelper;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.exception.UserNotFoundException;
 import org.digitalcampus.oppia.listener.TrackerServiceListener;
@@ -94,13 +95,13 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
                     submitAttempted = true;
 
                     @SuppressWarnings("unchecked")
-                    Collection<Collection<TrackerLog>> userTrackers = split((Collection<Object>) payload.getData(), MobileLearning.MAX_TRACKER_SUBMIT);
+                    Collection<Collection<TrackerLog>> userTrackers = split((Collection<Object>) payload.getData(), App.MAX_TRACKER_SUBMIT);
                     sendTrackerBatch(userTrackers, u, payload);
                 }
             }
 
             List<File> unsentLogs = getActivityLogsToSend();
-            if (unsentLogs.size() > 0){
+            if (!unsentLogs.isEmpty()){
                 for (File activityLog : unsentLogs){
                     sendTrackerLog(activityLog, payload);
                 }
@@ -129,15 +130,7 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
             String dataToSend = org.apache.commons.io.FileUtils.readFileToString(activityLog);
 
             //We don't need the current user to send this, just some with a valid apiKey
-            User user;
-            try {
-                user = db.getOneRegisteredUser();
-            } catch (UserNotFoundException e) {
-                Mint.logException(e);
-                payload.setResult(false);
-                //If there is no logged in user, there is no point in trying to submit trackers
-                return;
-            }
+            User user = db.getOneRegisteredUser();
 
             if (!user.isOfflineRegister()){
                 boolean success = sendTrackers(user, dataToSend, true, payload);
@@ -152,7 +145,7 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
                 }
             }
 
-        } catch (IOException e) {
+        } catch (IOException | UserNotFoundException e) {
             Mint.logException(e);
             payload.setResult(false);
         }
@@ -166,10 +159,10 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
         try {
             OkHttpClient client = HTTPClientUtils.getClient(ctx);
             Request request = new Request.Builder()
-                    .url(apiEndpoint.getFullURL(ctx, isRaw ? MobileLearning.ACTIVITYLOG_PATH : MobileLearning.TRACKER_PATH))
+                    .url(apiEndpoint.getFullURL(ctx, isRaw ? Paths.ACTIVITYLOG_PATH : Paths.TRACKER_PATH))
                     .addHeader(HTTPClientUtils.HEADER_AUTH,
                             HTTPClientUtils.getAuthHeaderValue(user.getUsername(), user.getApiKey()))
-                    .patch(RequestBody.create(HTTPClientUtils.MEDIA_TYPE_JSON, dataToSend))
+                    .patch(RequestBody.create(dataToSend, HTTPClientUtils.MEDIA_TYPE_JSON))
                     .build();
 
             Response response = client.newCall(request).execute();
@@ -188,13 +181,7 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
                     }
                     editor.apply();
 
-                    try {
-                        JSONObject metadata = jsonResp.getJSONObject("metadata");
-                        MetaDataUtils mu = new MetaDataUtils(ctx);
-                        mu.saveMetaData(metadata, prefs);
-                    } catch (JSONException e) {
-                        Log.d(TAG, JSON_EXCEPTION_MESSAGE, e);
-                    }
+                    saveMetadata(jsonResp);
                 }
 
                 return true;
@@ -203,13 +190,13 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
                 if (response.code() == 400) {
                     // submitted but invalid digest - returned 400 Bad Request -
                     // so record as submitted so doesn't keep trying
-                    return true; //TODO: Have more meaningful bad request handling
+                    return true; // OPPIA-217
                 } else{
                     Log.d(TAG, "Error sending trackers:" + response.code());
                     Log.d(TAG, "Msg:" + response.body().string());
                     if (response.code() == 401) {
                         //The apiKey of this user is invalid
-                        SessionManager.setUserApiKeyValid(ctx, user, false);
+                        SessionManager.setUserApiKeyValid(user, false);
                         //We don't process more of this user trackers
                     }
                     return false;
@@ -226,6 +213,16 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
             Log.d(TAG, JSON_EXCEPTION_MESSAGE, e);
             Mint.logException(e);
             return false;
+        }
+    }
+
+    private void saveMetadata(JSONObject jsonResp) {
+        try {
+            JSONObject metadata = jsonResp.getJSONObject("metadata");
+            MetaDataUtils mu = new MetaDataUtils(ctx);
+            mu.saveMetaData(metadata, prefs);
+        } catch (JSONException e) {
+            Log.d(TAG, JSON_EXCEPTION_MESSAGE, e);
         }
     }
 
@@ -283,10 +280,6 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Payload, Integer, 
                 trackerServiceListener.trackerComplete(p.isResult(), p.getResultResponse(), failures);
             }
         }
-        // reset submittask back to null after completion - so next call can run properly
-//        MobileLearning app = (MobileLearning) ctx.getApplicationContext();
-//        app.omSubmitTrackerMultipleTask = null;
-
     }
 
     public void setTrackerServiceListener(TrackerServiceListener tsl) {

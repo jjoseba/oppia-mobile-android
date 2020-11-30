@@ -17,7 +17,7 @@ public class MainScorecardFragment extends TabsFragment {
     }
 
     public MainScorecardFragment() {
-
+        // do nothing
     }
 
     @Override
@@ -32,6 +32,9 @@ public class MainScorecardFragment extends TabsFragment {
 
         fragments.add(ActivitiesFragment.newInstance(null));
         tabTitles.add(this.getString(R.string.tab_title_activity));
+
+        fragments.add(GlobalQuizAttemptsFragment.newInstance());
+        tabTitles.add(this.getString(R.string.scorecard_quizzes_title));
 
         configureFragments(fragments, tabTitles);
     }

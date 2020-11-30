@@ -85,7 +85,7 @@ public class BluetoothTransferService extends Service {
     private Handler sendHandler;
     private BluetoothBroadcastReceiver alternateNotifier;
 
-    public synchronized static List<CourseTransferableFile> getTasksTransferring(){
+    public static synchronized List<CourseTransferableFile> getTasksTransferring(){
         if (currentInstance != null){
             return currentInstance.tasksDownloading;
         }
@@ -93,6 +93,7 @@ public class BluetoothTransferService extends Service {
     }
 
     // Fires when a service is first initialized
+    @Override
     public void onCreate() {
         super.onCreate();
 
@@ -109,7 +110,7 @@ public class BluetoothTransferService extends Service {
 
             @Override
             public void onFail(CourseTransferableFile file, String error) {
-                //TODO: Notify the error?
+                // do nothing for now
             }
 
             @Override
@@ -129,15 +130,15 @@ public class BluetoothTransferService extends Service {
 
             @Override
             public void onTransferComplete(CourseTransferableFile file) {
-                if (tasksDownloading.size() == 0){
-                    OppiaNotificationUtils.sendSimpleMessage(BluetoothTransferService.this, true, 0,
+                if (tasksDownloading.isEmpty()){
+                    OppiaNotificationUtils.sendSimpleMessage(BluetoothTransferService.this, true,
                             getString(R.string.bluetooth_all_transfers_complete));
                 }
             }
 
             @Override
             public void onCommunicationClosed(String error) {
-                OppiaNotificationUtils.sendSimpleMessage(BluetoothTransferService.this, true, 0,
+                OppiaNotificationUtils.sendSimpleMessage(BluetoothTransferService.this, true,
                         getString(R.string.bluetooth_communication_closed));
             }
         });
@@ -177,12 +178,7 @@ public class BluetoothTransferService extends Service {
                 if (!tasksDownloading.contains(file)){
                     tasksDownloading.add(file);
                 }
-                sendHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        sendFile(file);
-                    }
-                }, 100);
+                sendHandler.postDelayed(() -> sendFile(file), 100);
             }
         }
 
@@ -225,12 +221,7 @@ public class BluetoothTransferService extends Service {
         output = tmpOut;
 
         Log.d(TAG, "Socket streams created, starting receive thread");
-        receiveHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                listenAndReceiveFiles();
-            }
-        });
+        receiveHandler.post(this::listenAndReceiveFiles);
     }
 
 
@@ -279,7 +270,6 @@ public class BluetoothTransferService extends Service {
     public void sendFile(CourseTransferableFile trFile){
         try {
             DataOutputStream d = new DataOutputStream(output);
-
             File file = trFile.getFile();
             long fileLength = file.length();
             d.writeUTF(file.getName());
@@ -293,37 +283,14 @@ public class BluetoothTransferService extends Service {
             localIntent.putExtra(SERVICE_FILE, trFile);
             sendOrderedBroadcast(localIntent, null);
 
-            int totalBytes = 0;
-            FileInputStream fis = new FileInputStream(file);
-
-            try {
-                byte[] buf = new byte[BUFFER_SIZE];
-                int bytesRead;
-
-                while((bytesRead = fis.read(buf)) != -1) {
-                    totalBytes += bytesRead;
-                    d.write(buf, 0, bytesRead);
-
-                    localIntent = new Intent(BROADCAST_ACTION);
-                    localIntent.putExtra(SERVICE_MESSAGE, MESSAGE_SEND_PROGRESS);
-                    localIntent.putExtra(SERVICE_FILE, trFile);
-                    localIntent.putExtra(SERVICE_PROGRESS, totalBytes);
-                    // Broadcasts the Intent to receivers in this app.
-                    sendOrderedBroadcast(localIntent, null);
-                }
-                d.flush();
-            }catch (IOException e){
-                Log.e(TAG, e.getMessage(), e);
-            }
-            finally {
-                fis.close();
-            }
-
-            Log.d(TAG, totalBytes + " bytes sent via bluetooth.");
+            transferFile(d, trFile);
 
             if (trFile.getType().equals(CourseTransferableFile.TYPE_ACTIVITY_LOG)){
-                //If it was an activity log, remove the local one
-                FileUtils.deleteFile(trFile.getFile());
+                //If it was an activity log, archive the local one
+                FileUtils.moveFileToDir(
+                        file,
+                        new File(Storage.getActivityArchivePath(BluetoothTransferService.this)),
+                        true);
             }
 
             localIntent = new Intent(BROADCAST_ACTION);
@@ -338,6 +305,34 @@ public class BluetoothTransferService extends Service {
             Mint.logException(e);
             Log.d(TAG, "IO exception: ", e);
         }
+    }
+
+
+    private void transferFile(DataOutputStream outputStream, CourseTransferableFile trFile){
+        int totalBytes = 0;
+
+        try (FileInputStream fis = new FileInputStream(trFile.getFile())) {
+            byte[] buf = new byte[BUFFER_SIZE];
+            int bytesRead;
+
+            while((bytesRead = fis.read(buf)) != -1) {
+                totalBytes += bytesRead;
+                outputStream.write(buf, 0, bytesRead);
+
+                Intent localIntent = new Intent(BROADCAST_ACTION);
+                localIntent.putExtra(SERVICE_MESSAGE, MESSAGE_SEND_PROGRESS);
+                localIntent.putExtra(SERVICE_FILE, trFile);
+                localIntent.putExtra(SERVICE_PROGRESS, totalBytes);
+                // Broadcasts the Intent to receivers in this app.
+                sendOrderedBroadcast(localIntent, null);
+            }
+            outputStream.flush();
+        }catch (IOException e){
+            Mint.logException(e);
+            Log.e(TAG, e.getMessage(), e);
+        }
+
+        Log.d(TAG, totalBytes + " bytes sent via bluetooth.");
     }
 
 
@@ -372,50 +367,13 @@ public class BluetoothTransferService extends Service {
                 localIntent.putExtra(SERVICE_FILE, trFile);
                 sendOrderedBroadcast(localIntent, null);
 
-                File destinationDir = (CourseTransferableFile
-                        .TYPE_COURSE_BACKUP.equals(type)) ?
-                        new File(Storage.getDownloadPath(BluetoothTransferService.this)) :
-                        new File(Storage.getBluetoothTransferTempPath(BluetoothTransferService.this));
+                File destinationDir = new File(Storage.getBluetoothTransferTempPath(BluetoothTransferService.this));
                 if (!destinationDir.exists()){
                     destinationDir.mkdirs();
                 }
                 File file = new File(destinationDir, fileName);
-                FileOutputStream output = new FileOutputStream(file);
 
-                int totalBytes = 0;
-                int prevProgress = 0;
-                try {
-                    byte[] buf = new byte[BUFFER_SIZE];
-                    int bytesRead;
-
-                    while ((bytesRead = d.read(buf, 0, Math.min(BUFFER_SIZE, (int) fileSize - totalBytes))) != -1) {
-                        totalBytes += bytesRead;
-                        output.write(buf, 0, bytesRead);
-                        if (totalBytes >= fileSize) {
-                            Log.d(TAG, "Total bytes read: " + totalBytes + "/" + fileSize);
-                            break;
-                        }
-
-                        int currentProgress = totalBytes * 100 / (int)fileSize;
-                        if (currentProgress > prevProgress){
-                            //Only send broadcast if progress advanced
-                            prevProgress = currentProgress;
-
-                            localIntent = new Intent(BROADCAST_ACTION);
-                            localIntent.putExtra(SERVICE_MESSAGE, MESSAGE_RECEIVE_PROGRESS);
-                            localIntent.putExtra(SERVICE_FILE, trFile);
-                            localIntent.putExtra(SERVICE_PROGRESS, totalBytes);
-                            // Broadcasts the Intent to receivers in this app.
-                            sendOrderedBroadcast(localIntent, null);
-                        }
-
-                    }
-                } catch (IOException e){
-                    Log.e(TAG,"Error receiving file", e);
-                } finally {
-                    output.close();
-                }
-
+                int totalBytes = writeFile(d, trFile, file);
                 if (totalBytes < fileSize){
                     FileUtils.deleteFile(file);
                     localIntent = new Intent(BROADCAST_ACTION);
@@ -425,7 +383,11 @@ public class BluetoothTransferService extends Service {
                     sendOrderedBroadcast(localIntent, null);
                 }
                 else{
-                    if (type.equals(CourseTransferableFile.TYPE_COURSE_MEDIA)){
+                    if (type.equals(CourseTransferableFile.TYPE_COURSE_BACKUP)){
+                        File mediaDir = new File(Storage.getDownloadPath(BluetoothTransferService.this));
+                        FileUtils.moveFileToDir(file, mediaDir, true);
+                    }
+                    else if (type.equals(CourseTransferableFile.TYPE_COURSE_MEDIA)){
                         File mediaDir = new File(Storage.getMediaPath(BluetoothTransferService.this));
                         FileUtils.moveFileToDir(file, mediaDir, true);
                     }
@@ -447,6 +409,44 @@ public class BluetoothTransferService extends Service {
                 break;
             }
         }
+    }
+
+    private int writeFile(DataInputStream d, CourseTransferableFile file, File outputFile) {
+
+        int totalBytes = 0;
+        int prevProgress = 0;
+        try (FileOutputStream out = new FileOutputStream(outputFile) ){
+            long fileSize = file.getFileSize();
+            byte[] buf = new byte[BUFFER_SIZE];
+            int bytesRead;
+
+            while ((bytesRead = d.read(buf, 0, Math.min(BUFFER_SIZE, (int) fileSize - totalBytes))) != -1) {
+                totalBytes += bytesRead;
+                out.write(buf, 0, bytesRead);
+                if (totalBytes >= fileSize) {
+                    Log.d(TAG, "Total bytes read: " + totalBytes + "/" + fileSize);
+                    break;
+                }
+
+                int currentProgress = totalBytes * 100 / (int)fileSize;
+                if (currentProgress > prevProgress){
+                    //Only send broadcast if progress advanced
+                    prevProgress = currentProgress;
+
+                    Intent localIntent = new Intent(BROADCAST_ACTION);
+                    localIntent.putExtra(SERVICE_MESSAGE, MESSAGE_RECEIVE_PROGRESS);
+                    localIntent.putExtra(SERVICE_FILE, file);
+                    localIntent.putExtra(SERVICE_PROGRESS, totalBytes);
+                    // Broadcasts the Intent to receivers in this app.
+                    sendOrderedBroadcast(localIntent, null);
+                }
+
+            }
+        } catch (IOException e){
+            Log.e(TAG,"Error receiving file", e);
+        }
+
+        return totalBytes;
     }
 
 }

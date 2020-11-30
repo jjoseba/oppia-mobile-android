@@ -22,16 +22,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ListView;
-import android.widget.TextView;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.splunk.mint.Mint;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.adapter.TagListAdapter;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.adapter.TagsAdapter;
 import org.digitalcampus.oppia.listener.APIRequestListener;
 import org.digitalcampus.oppia.model.Tag;
 import org.digitalcampus.oppia.model.TagRepository;
@@ -50,10 +47,10 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 
 	private ProgressDialog pDialog;
 	private JSONObject json;
-	private TagListAdapter tla;
     private ArrayList<Tag> tags;
 
 	@Inject TagRepository tagRepository;
+	private TagsAdapter adapterTags;
 
 	@Override
 	public void onStart(){
@@ -65,32 +62,29 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_download);
-		TextView tagTitle = findViewById(R.id.category_title);
-		tagTitle.setVisibility(View.GONE);
-		initializeDagger();
+		View subtitleBar = findViewById(R.id.action_bar_subtitle);
+		subtitleBar.setVisibility(View.GONE);
+		getAppComponent().inject(this);
 
         tags = new ArrayList<>();
-        tla = new TagListAdapter(this, tags);
+        adapterTags = new TagsAdapter(this, tags);
 
-        ListView listView = findViewById(R.id.tag_list);
-        listView.setAdapter(tla);
-        listView.setOnItemClickListener(new OnItemClickListener() {
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Tag selectedTag = tags.get(position);
-                Intent i = new Intent(TagSelectActivity.this, DownloadActivity.class);
-                Bundle tb = new Bundle();
-                tb.putSerializable(Tag.TAG, selectedTag);
-                i.putExtras(tb);
-                startActivity(i);
-            }
-        });
+		RecyclerView recyclerTags = findViewById(R.id.recycler_tags);
+		recyclerTags.setAdapter(adapterTags);
+		adapterTags.setOnItemClickListener(new TagsAdapter.OnItemClickListener() {
+			@Override
+			public void onItemClick(View view, int position) {
+				Tag selectedTag = tags.get(position);
+				Intent i = new Intent(TagSelectActivity.this, DownloadActivity.class);
+				Bundle tb = new Bundle();
+				tb.putSerializable(Tag.TAG_CLASS, selectedTag);
+				i.putExtras(tb);
+				startActivity(i);
+			}
+		});
 
 	}
 
-	private void initializeDagger() {
-		MobileLearning app = (MobileLearning) getApplication();
-		app.getComponent().inject(this);
-	}
 	
 	@Override
 	public void onResume(){
@@ -100,7 +94,7 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 			this.getTagList();
         } else if ((tags != null) && !tags.isEmpty()) {
             //We already have loaded JSON and tags (coming from orientationchange)
-            tla.notifyDataSetChanged();
+            adapterTags.notifyDataSetChanged();
         }
         else{
             //The JSON is downloaded but tag list is not
@@ -160,7 +154,7 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 		try {
 			tagRepository.refreshTagList(tags, json);
 
-            tla.notifyDataSetChanged();
+            adapterTags.notifyDataSetChanged();
             findViewById(R.id.empty_state).setVisibility((tags.isEmpty()) ? View.VISIBLE : View.GONE);
 
 		} catch (JSONException e) {

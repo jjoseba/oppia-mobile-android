@@ -27,7 +27,7 @@ import android.content.SharedPreferences;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -40,6 +40,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
@@ -48,8 +49,9 @@ import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
+import org.digitalcampus.oppia.di.AppComponent;
 import org.digitalcampus.oppia.gamification.Gamification;
 import org.digitalcampus.oppia.gamification.GamificationBroadcastReceiver;
 import org.digitalcampus.oppia.gamification.GamificationService;
@@ -58,7 +60,6 @@ import org.digitalcampus.oppia.listener.GamificationEventListener;
 import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.utils.UIUtils;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -68,7 +69,7 @@ import io.github.inflationx.viewpump.ViewPumpContextWrapper;
 
 public class AppActivity extends AppCompatActivity implements APIKeyRequestListener, GamificationEventListener {
 
-    protected final String TAG = this.getClass().getSimpleName();
+    protected static final String TAG = AppActivity.class.getSimpleName();
 
     GamificationBroadcastReceiver gamificationReceiver;
     private Menu optionsMenu;
@@ -82,9 +83,13 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
         initializeDaggerBase();
     }
 
+    public AppComponent getAppComponent(){
+        App app = (App) getApplication();
+        return app.getComponent();
+    }
+
     private void initializeDaggerBase() {
-        MobileLearning app = (MobileLearning) getApplication();
-        app.getComponent().inject(this);
+        getAppComponent().inject(this);
     }
 
     @Override
@@ -100,6 +105,13 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
         toast(getString(stringId));
     }
 
+    public void alert(int stringId) {
+        new AlertDialog.Builder(this)
+                .setMessage(stringId)
+                .setNegativeButton(R.string.close, null)
+                .show();
+    }
+
     public SharedPreferences getPrefs() {
         return prefs;
     }
@@ -107,12 +119,11 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                this.finish();
-                return true;
-            default:
-                return false;
+        if (item.getItemId() == android.R.id.home) {
+            this.finish();
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -171,26 +182,24 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
         registerReceiver(gamificationReceiver, broadcastFilter);
 
         //We check if the user session time has expired to log him out
-        if (MobileLearning.SESSION_EXPIRATION_ENABLED) {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (App.SESSION_EXPIRATION_ENABLED) {
+            SharedPreferences prefsReload = PreferenceManager.getDefaultSharedPreferences(this);
             long now = System.currentTimeMillis() / 1000;
-            long lastTimeActive = prefs.getLong(PrefsActivity.LAST_ACTIVE_TIME, now);
+            long lastTimeActive = prefsReload.getLong(PrefsActivity.LAST_ACTIVE_TIME, now);
             long timePassed = now - lastTimeActive;
 
-            prefs.edit().putLong(PrefsActivity.LAST_ACTIVE_TIME, now).apply();
-            if (timePassed > MobileLearning.SESSION_EXPIRATION_TIMEOUT) {
+            prefsReload.edit().putLong(PrefsActivity.LAST_ACTIVE_TIME, now).apply();
+            if (timePassed > App.SESSION_EXPIRATION_TIMEOUT) {
                 Log.d(TAG, "Session timeout (passed " + timePassed + " seconds), logging out");
                 logoutAndRestartApp();
             }
         }
-
-//        onGamificationEvent("esprueba", 20);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if (MobileLearning.SESSION_EXPIRATION_ENABLED) {
+        if (App.SESSION_EXPIRATION_ENABLED) {
             long now = System.currentTimeMillis() / 1000;
             PreferenceManager
                     .getDefaultSharedPreferences(this).edit()
@@ -218,29 +227,26 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
 
     @Override
     public void apiKeyInvalidated() {
-        UIUtils.showAlert(this, R.string.error, R.string.error_apikey_expired, new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
-                logoutAndRestartApp();
-                return true;
-            }
+        UIUtils.showAlert(this, R.string.error, R.string.error_apikey_expired, () -> {
+            logoutAndRestartApp();
+            return true;
         });
     }
 
     @Override
     public void onGamificationEvent(String message, int points) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean notifEnabled = prefs.getBoolean(PrefsActivity.PREF_SHOW_GAMIFICATION_EVENTS, true);
+        SharedPreferences prefsGame = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean notifEnabled = prefsGame.getBoolean(PrefsActivity.PREF_SHOW_GAMIFICATION_EVENTS, true);
         if (notifEnabled) {
 
             final View rootView = ((ViewGroup) findViewById(android.R.id.content)).getChildAt(0);
 
-            Snackbar snackbar = Snackbar.make(rootView, "", Snackbar.LENGTH_INDEFINITE);
+            Snackbar snackbar = Snackbar.make(rootView, "", BaseTransientBottomBar.LENGTH_INDEFINITE);
             Snackbar.SnackbarLayout layout = (Snackbar.SnackbarLayout) snackbar.getView();
             layout.setClickable(false);
 
             // Hide the text
-            TextView textView = (TextView) layout.findViewById(com.google.android.material.R.id.snackbar_text);
+            TextView textView = layout.findViewById(com.google.android.material.R.id.snackbar_text);
             textView.setVisibility(View.INVISIBLE);
 
             // Inflate our custom view
@@ -256,7 +262,7 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
             layout.addView(snackView, 0);
             layout.setBackgroundColor(ContextCompat.getColor(this, android.R.color.transparent));
 
-            final int gamifPointsViewType = Integer.parseInt(prefs.getString(PrefsActivity.PREF_GAMIFICATION_POINTS_ANIMATION, Gamification.GAMIFICATION_POINTS_ANIMATION));
+            final int gamifPointsViewType = Integer.parseInt(prefsGame.getString(PrefsActivity.PREF_GAMIFICATION_POINTS_ANIMATION, Gamification.GAMIFICATION_POINTS_ANIMATION));
 
             final boolean fullAnimation = gamifPointsViewType == 2 || gamifPointsViewType == 3;
             final boolean withSound = gamifPointsViewType == 3;
@@ -311,8 +317,6 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
 
         if (optionsMenu != null && optionsMenu.findItem(R.id.points) != null) {
 
-            AnimatorSet animXY = new AnimatorSet();
-
             ObjectAnimator animY = ObjectAnimator.ofFloat(tvGamificationNotifPoints, "y",
                     tvGamificationNotifPoints.getTop(), 50);
             animY.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -327,7 +331,7 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
             ObjectAnimator animX = ObjectAnimator.ofFloat(tvGamificationNotifPoints, "x",
                     tvGamificationNotifPoints.getLeft(), itemX);
 
-            animXY = new AnimatorSet();
+            AnimatorSet animXY = new AnimatorSet();
             animXY.playTogether(animX, animY);
             animXY.setDuration(1200);
 
@@ -358,7 +362,7 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
         animSetGlobal.addListener(new Animator.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animation) {
-
+                // do nothing
             }
 
             @Override
@@ -369,12 +373,12 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
 
             @Override
             public void onAnimationCancel(Animator animation) {
-
+                // do nothing
             }
 
             @Override
             public void onAnimationRepeat(Animator animation) {
-
+                // do nothing
             }
         });
 
@@ -385,11 +389,6 @@ public class AppActivity extends AppCompatActivity implements APIKeyRequestListe
         int durationViewPoints = Integer.parseInt(prefs.getString(PrefsActivity.PREF_DURATION_GAMIFICATION_POINTS_VIEW,
                 String.valueOf(Gamification.DURATION_GAMIFICATION_POINTS_VIEW)));
 
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                snackbar.dismiss();
-            }
-        }, TimeUnit.SECONDS.toMillis(durationViewPoints));
+        new Handler().postDelayed(snackbar::dismiss, TimeUnit.SECONDS.toMillis(durationViewPoints));
     }
 }

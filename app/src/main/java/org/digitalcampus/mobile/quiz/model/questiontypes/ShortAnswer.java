@@ -17,20 +17,12 @@
 
 package org.digitalcampus.mobile.quiz.model.questiontypes;
 
-import android.util.Log;
-
-import com.splunk.mint.Mint;
+import org.digitalcampus.mobile.quiz.Quiz;
+import org.digitalcampus.mobile.quiz.model.Response;
 
 import java.io.Serializable;
-import java.util.List;
 
-import org.digitalcampus.mobile.quiz.Quiz;
-import org.digitalcampus.mobile.quiz.model.QuizQuestion;
-import org.digitalcampus.mobile.quiz.model.Response;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-public class ShortAnswer extends QuizQuestion implements Serializable {
+public class ShortAnswer extends UserResponseQuestion implements Serializable {
 
     private static final long serialVersionUID = 3539362553016059321L;
     public static final String TAG = ShortAnswer.class.getSimpleName();
@@ -53,35 +45,17 @@ public class ShortAnswer extends QuizQuestion implements Serializable {
             }
         }
         if (total == 0){
-            for (Response r : responseOptions){
-                if (r.getTitle(lang).equalsIgnoreCase("*") && r.getFeedback(lang) != null && !(r.getFeedback(lang).equals(""))){
-                    this.feedback = r.getFeedback(lang);
-                }
+            this.setFeedback(lang);
+        }
+        this.calculateUserscore(total);
+    }
+
+    private void setFeedback(String lang){
+        for (Response r : responseOptions){
+            if (r.getTitle(lang).equalsIgnoreCase("*") && r.getFeedback(lang) != null && !(r.getFeedback(lang).equals(""))){
+                this.feedback = r.getFeedback(lang);
             }
         }
-        int maxscore = Integer.parseInt(this.getProp(Quiz.JSON_PROPERTY_MAXSCORE));
-        if (total > maxscore){
-            userscore = maxscore;
-        } else {
-            userscore = total;
-        }
-    }
-
-    @Override
-    public void setUserResponses(List<String> str) {
-        if (!str.equals(this.userResponses)){
-            this.setFeedbackDisplayed(false);
-        }
-        this.userResponses = str;
-    }
-
-    @Override
-    public String getFeedback(String lang) {
-        // reset feedback back to nothing
-        this.feedback = "";
-        this.mark(lang);
-
-        return this.feedback;
     }
 
     @Override
@@ -89,32 +63,5 @@ public class ShortAnswer extends QuizQuestion implements Serializable {
         return Integer.parseInt(this.getProp(Quiz.JSON_PROPERTY_MAXSCORE));
     }
 
-    @Override
-    public JSONObject responsesToJSON() {
-        JSONObject jo = new JSONObject();
-        if(userResponses.isEmpty()){
-            try {
-                jo.put(Quiz.JSON_PROPERTY_QUESTION_ID, this.id);
-                jo.put(Quiz.JSON_PROPERTY_SCORE,userscore);
-                jo.put(Quiz.JSON_PROPERTY_TEXT, "");
-            } catch (JSONException jsone) {
-                Log.d(TAG,"Error creating json object", jsone);
-                Mint.logException(jsone);
-            }
-            return jo;
-        }
 
-        for(String ur: userResponses ){
-            try {
-                jo.put(Quiz.JSON_PROPERTY_QUESTION_ID, this.id);
-                jo.put(Quiz.JSON_PROPERTY_SCORE,userscore);
-                jo.put(Quiz.JSON_PROPERTY_TEXT, ur);
-            } catch (JSONException jsone) {
-                Log.d(TAG,"Error creating json object", jsone);
-                Mint.logException(jsone);
-            }
-        }
-
-        return jo;
-    }
 }

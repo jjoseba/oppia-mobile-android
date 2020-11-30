@@ -14,8 +14,6 @@
     <string name="menu_language">اختيار اللغة</string>
     <string name="menu_settings">الإعدادات</string>
     <string name="menu_about">عن طبشورة أوبيا</string>
-    <string name="menu_font_increase">تكبير حجم النص</string>
-    <string name="menu_font_decrease">تصغير حجم النص</string>
     <string name="menu_help">المساعدة</string>
     <string name="menu_logout">تسجيل الخروج</string>
     <string name="menu_read_aloud">القراءة بصوت عال</string>
@@ -33,7 +31,6 @@
     <string name="fragment_welcome_title">أهلا وسهلا في التطبيق طبشورة أوبيا</string>
     <string name="fragment_welcome_desc">طبشورة أوبيا هي تطبيق تعليمي مخصص لنظام أندرويد يعمل على الهاتف النقال أو الجهاز اللوحي ويسمح بتحميل الدروس من منصة طبشورة الإلكترونية. كلمة أوبيا تعود إلى الفنلندي وتعني التعلم</string>
     <string name="fragment_welcome_login_info">لإستخدام طبشورة أوبيا عليك تسجيل الدخول أو إنشاء حساب</string>
-    <string name="fragment_welcome_privacy">تنطبق سياسة الخصوصية على كافة البيانات الشخصية التي تقوم بتزويدنا بها عبر هذا الموقع<a href="http://tabshoura.com/wordpress/politique-de-confidentialite/">للمزيد حول سياسة الخصوصية المعتمدة لدى ديجيتيل كامبوس</a></string>
 
     <string name="tab_title_about">عن طبشورة أوبيا</string>
     <string name="tab_title_badges">شارات</string>
@@ -54,8 +51,6 @@
     <string name="title_activity_course_index">مناهج الدروس</string>
     <string name="title_activity_course">نشاط</string>
     <string name="title_course_meta">عن طبشورة أوبيا</string>
-    <string name="title_stats_submitted">لا أنشطة مرسلة الى الخادم</string>
-    <string name="title_stats_unsubmitted">لا أنشطة معلقة</string>
     <string name="title_prefs">الإعدادات</string>
     <string name="title_scorecard">دفتر العلامات</string>
     <string name="title_tag_select_activity">اختار فئة</string>
@@ -98,15 +93,11 @@
 <string name="prefBackgroudDataConnect_summary">أرسل سجل الأنشطة حتى إذا كان التطبيق في وضع توقف مؤقت</string>
 <string name="prefLanguage">اللغة المفضلة</string>
 <string name="prefHighlightCompleted">إبراز الأنشطة المنتهية</string>
-<string name="prefNoScheduleReminders">عرض عدد الأنشطة المقترحة</string>
-<string name="prefNoScheduleReminders_summary">عرض عدد الأنشطة المقترحة</string>
 <string name="prefServer">الخادم</string>
 <string name="prefServerTimeoutConnection">مهلة الإتصال</string>
 <string name="prefServerTimeoutResponse">مدة الإجابة</string>
 <string name="prefShowCourseDescription">عرض وصف الدروس</string>
 <string name="prefShowProgressBar">عرض شريط التقدم</string>
-<string name="prefShowScheduleReminders">عرض الأنشطة المقترحة</string>
-<string name="prefShowScheduleReminders_summary">عرض الأنشطة التي يجب إكمالها لاحقا</string>
 <string name="prefShowSectionNumbers">عرض أرقام الأقسام</string>
 <string name="prefTextSize">حجم النص</string>
 <string name="prefUser">إسم المستخدم</string>
@@ -183,7 +174,6 @@
 
 <string name="publisher">الناشر</string>
 <string name="update">تحديث</string>
-<string name="update_schedule">جدول التحديثات</string>
 <string name="installed">تم تنزيله بنجاح</string>
 <string name="install">تنزيل الدرس</string>
 
@@ -191,9 +181,7 @@
 <string name="downloading">جاري التحميل &#8230;</string>
 <string name="download_complete">إكتمل التحميل</string>
 
-<string name="update_starting">تحديثات انتظامية</string>
 <string name="updating">جاري التحديث &#8230;</string>
-<string name="update_complete">اكتمل التحديث</string>
 
 <string name="installing_course">تنزيل  %1$s:</string>
 <string name="install_complete">إاكتمل التنزيل</string>
@@ -220,7 +208,6 @@
 <string name="info_no_badges">ليس لديك شارة أنهي الدرس الأول للحصول على الشارة الأولى</string>
 
 <string name="scan_media_download_button">تحميل</string>
-<string name="scan_media_download_via_pc_button">تحميل من الحاسوب</string>
 <string name="success_media_download">تحميل ملف الوسائط : \'%1$s\' بنجاح</string>
 <string name="media_file_size">%1$.1fMb</string>
 <string name="missing_media_download_selected">تحميل المجموعة المحددة</string>
@@ -291,14 +278,6 @@
 <string name="reset_complete">تمت إعادة تعيين كلمة السر بنجاح رجاء مراجعة البريد الالكتروني للحصول على كلمة السر الجديدة</string>
 
 <string name="change_language">تغيير اللغة</string>
-
-<string name="download_via_pc_message">الملف   \'%1$s\' موجود على بطاقة الذاكرة الرقمية للجهاز إفتحه على الحاسوب واتبع التعليمات لتحميل ملفات الوسائط وانسخها على بطاقة
-الذاكرة الرقمية للجهاز المستعمل</string>
-<string name="download_via_pc_title">تحميل ملفات الوسائط</string>
-<string name="download_via_pc_intro">تحميل كافة الملفات أدناه على الحاسوب إضغط على زر الفأرة الأيمن واختار العبارة حفظ بإسم</string>
-<string name="download_via_pc_final">بعد تحميل الملفات إنسخها على الدليل  \'%1$s\' من بطاقة الذاكرة الرقمية للجهاز المستعمل</string>
-
-<string name="schedule_reminders">الأنشطة اللاحقة المقترحة</string>
 
 <string name="course_draft">(مسودة)</string>
 

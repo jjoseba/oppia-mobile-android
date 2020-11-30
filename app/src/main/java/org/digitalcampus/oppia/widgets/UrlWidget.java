@@ -18,7 +18,6 @@
 package org.digitalcampus.oppia.widgets;
 
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,7 +31,7 @@ import com.splunk.mint.Mint;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.CourseActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.Tracker;
 import org.digitalcampus.oppia.gamification.GamificationEngine;
 import org.digitalcampus.oppia.model.Activity;
@@ -43,9 +42,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
-import java.util.Locale;
 
-public class UrlWidget extends WidgetFactory {
+public class UrlWidget extends BaseWidget {
 
 	public static final String TAG = UrlWidget.class.getSimpleName();	
 	
@@ -68,7 +66,6 @@ public class UrlWidget extends WidgetFactory {
 	@SuppressWarnings("unchecked")
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		prefs = PreferenceManager.getDefaultSharedPreferences(super.getActivity());
 		course = (Course) getArguments().getSerializable(Course.TAG);
 		activity = (org.digitalcampus.oppia.model.Activity) getArguments().getSerializable(org.digitalcampus.oppia.model.Activity.TAG);
 		this.setIsBaseline(getArguments().getBoolean(CourseActivity.BASELINE_TAG));
@@ -85,9 +82,8 @@ public class UrlWidget extends WidgetFactory {
 	public void onActivityCreated(Bundle savedInstanceState) { 
 		super.onActivityCreated(savedInstanceState);
 
-		String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
 		// show description if any
-		String desc = activity.getDescription(lang);
+		String desc = activity.getDescription(prefLang);
 		TextView descTV = getView().findViewById(R.id.widget_url_description);
 		if ((desc != null) && desc.length() > 0){
 			descTV.setText(desc);
@@ -100,13 +96,17 @@ public class UrlWidget extends WidgetFactory {
 		wv.getSettings().setDefaultFontSize(defaultFontSize);
 		wv.getSettings().setJavaScriptEnabled(true);
 		wv.setWebViewClient(new WebViewClient() {
+			/**      
+			 * @deprecated (replace as soon as possible)
+			 */
 	        @Override
+			@Deprecated
 	        public boolean shouldOverrideUrlLoading(WebView view, String url)
 	        {
 	            return false;
 	        }
 	    });
-		wv.loadUrl(activity.getLocation(lang));
+		wv.loadUrl(activity.getLocation(prefLang));
 
 	}
 	
@@ -119,7 +119,7 @@ public class UrlWidget extends WidgetFactory {
 	@Override
 	public void saveTracker(){
 		long timetaken = this.getSpentTime();
-		if (timetaken < MobileLearning.URL_READ_TIME) {
+		if (timetaken < App.URL_READ_TIME) {
 			return;
 		}
 		Tracker t = new Tracker(super.getActivity());
@@ -130,8 +130,7 @@ public class UrlWidget extends WidgetFactory {
 			MetaDataUtils mdu = new MetaDataUtils(super.getActivity());
 			obj.put("timetaken", timetaken);
 			obj = mdu.getMetaData(obj);
-			String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
-			obj.put("lang", lang);
+			obj.put("lang", prefLang);
 
 			GamificationEngine gamificationEngine = new GamificationEngine(getActivity());
 			GamificationEvent gamificationEvent = gamificationEngine.processEventURLActivity(this.course, this.activity);
@@ -163,6 +162,7 @@ public class UrlWidget extends WidgetFactory {
 
 	@Override
 	public void setWidgetConfig(HashMap<String, Object> config) {
+		// do nothing
 	}
 
 }

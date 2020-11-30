@@ -18,8 +18,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/activity_vertical_margin"
-            android:background="@drawable/actionbar_background_gradient"
-            android:drawableTop="@drawable/dc_logo"
+            android:background="@drawable/bg_toolbar"
+            android:drawableTop="@drawable/brand_icon"
             android:gravity="center"
             android:paddingTop="@dimen/course_icon_size"
             android:paddingBottom="@dimen/padding_large"
@@ -55,7 +55,8 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/input_layout_password"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                app:passwordToggleEnabled="true">
 
                 <EditText
                     android:id="@+id/login_password_field"

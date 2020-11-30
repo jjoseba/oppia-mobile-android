@@ -23,16 +23,17 @@ import com.google.android.material.tabs.TabLayout;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.AboutActivity;
 import org.digitalcampus.oppia.activity.CourseIndexActivity;
+import org.digitalcampus.oppia.activity.EditProfileActivity;
 import org.digitalcampus.oppia.activity.MainActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.activity.SearchActivity;
 import org.digitalcampus.oppia.activity.StartUpActivity;
 import org.digitalcampus.oppia.activity.TagSelectActivity;
 import org.digitalcampus.oppia.activity.WelcomeActivity;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.di.AppComponent;
 import org.digitalcampus.oppia.di.AppModule;
-import org.digitalcampus.oppia.model.Badges;
+import org.digitalcampus.oppia.model.Badge;
 import org.digitalcampus.oppia.model.CompleteCourse;
 import org.digitalcampus.oppia.model.CompleteCourseProvider;
 import org.digitalcampus.oppia.model.Course;
@@ -67,6 +68,7 @@ import static androidx.test.espresso.contrib.DrawerMatchers.isOpen;
 import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withChild;
+import static androidx.test.espresso.matcher.ViewMatchers.withContentDescription;
 import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
@@ -77,6 +79,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -89,18 +92,15 @@ public class MainActivityUITest {
 
     @Rule
     public DaggerMockRule<AppComponent> daggerRule =
-            new DaggerMockRule<>(AppComponent.class, new AppModule((MobileLearning) InstrumentationRegistry.getInstrumentation()
+            new DaggerMockRule<>(AppComponent.class, new AppModule((App) InstrumentationRegistry.getInstrumentation()
                     .getTargetContext()
                     .getApplicationContext())).set(
-                    new DaggerMockRule.ComponentSetter<AppComponent>() {
-                        @Override
-                        public void setComponent(AppComponent component) {
-                            MobileLearning app =
-                                    (MobileLearning) InstrumentationRegistry.getInstrumentation()
-                                            .getTargetContext()
-                                            .getApplicationContext();
-                            app.setComponent(component);
-                        }
+                    component -> {
+                        App app =
+                                (App) InstrumentationRegistry.getInstrumentation()
+                                        .getTargetContext()
+                                        .getApplicationContext();
+                        app.setComponent(component);
                     });
 
     @Rule
@@ -121,7 +121,7 @@ public class MainActivityUITest {
     @Mock
     ArrayList<Points> pointList;
     @Mock
-    ArrayList<Badges> badgesList;
+    ArrayList<Badge> badgeList;
 
     @Before
     public void setUp() throws Exception {
@@ -133,6 +133,7 @@ public class MainActivityUITest {
         when(editor.putString(anyString(), anyString())).thenReturn(editor);
         when(editor.putLong(anyString(), anyLong())).thenReturn(editor);
         when(editor.putBoolean(anyString(), anyBoolean())).thenReturn(editor);
+        when(editor.putInt(anyString(), anyInt())).thenReturn(editor);
     }
 
     private void givenThereAreSomeCourses(int numberOfCourses) {
@@ -143,12 +144,12 @@ public class MainActivityUITest {
             courses.add(CourseUtils.createMockCourse());
         }
 
-        when(coursesRepository.getCourses((Context) any())).thenReturn(courses);
+        when(coursesRepository.getCourses(any())).thenReturn(courses);
 
     }
 
     private int getCoursesCount() {
-        return coursesRepository.getCourses((Context) any()).size();
+        return coursesRepository.getCourses(any()).size();
     }
 
 
@@ -190,29 +191,25 @@ public class MainActivityUITest {
     public void showsCourseIndexOnCourseClick() throws Exception {
 
         final CompleteCourse completeCourse = CourseUtils.createMockCompleteCourse(5, 7);
-        Mockito.doAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                Context ctx = (Context) invocation.getArguments()[0];
-                ((ParseCourseXMLTask.OnParseXmlListener) ctx).onParseComplete(completeCourse);
+        Mockito.doAnswer((Answer<Void>) invocation -> {
+            Context ctx = (Context) invocation.getArguments()[0];
+            ((ParseCourseXMLTask.OnParseXmlListener) ctx).onParseComplete(completeCourse);
 
-                givenThereAreSomeCourses(1);
+            return null;
 
-                mainActivityTestRule.launchActivity(null);
+        }).when(completeCourseProvider).getCompleteCourseAsync(any(Context.class), any(Course.class));
 
-                Espresso.onView(ViewMatchers.withId(R.id.recycler_courses))
-                        .inRoot(RootMatchers.withDecorView(
-                                Matchers.is(mainActivityTestRule.getActivity().getWindow().getDecorView())))
-                        .perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
+        givenThereAreSomeCourses(1);
 
-                checkCorrectActivity(CourseIndexActivity.class);
+        mainActivityTestRule.launchActivity(null);
 
-                return null;
-
-            }
-        }).when(completeCourseProvider).getCompleteCourseAsync((Context) any(), (Course) any());
+        onView(withId(R.id.recycler_courses))
+                .inRoot(RootMatchers.withDecorView(
+                        Matchers.is(mainActivityTestRule.getActivity().getWindow().getDecorView())))
+                .perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
 
 
+        checkCorrectActivity(CourseIndexActivity.class);
     }
 
     @Test
@@ -287,15 +284,8 @@ public class MainActivityUITest {
 
         openDrawer();
 
-        onView(
-                allOf(
-                        withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE),
-                        withId(R.id.btn_expand_profile_options)))
-                .check(doesNotExist());
-
-        // when added Edit profile option, uncomment this and remove previous line
-//        onView(withId(R.id.btn_expand_profile_options)).perform(click());
-//        onView(withText(R.string.logout)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.btn_expand_profile_options)).perform(click());
+        onView(withText(R.string.logout)).check(matches(not(isDisplayed())));
     }
 
     @Test
@@ -332,21 +322,14 @@ public class MainActivityUITest {
 
         when(user.getBadges()).thenReturn(0);
 
-        doReturn(true).when(badgesList).add((Badges) any());
+        doReturn(true).when(badgeList).add((Badge) any());
 
         mainActivityTestRule.launchActivity(null);
 
         onView(withId(R.id.nav_bottom_points)).perform(click());
         onView(withId(R.id.tabs)).perform(selectTabAtPosition(2));
 
-//        onView(allOf(
-//                withText(R.string.tab_title_badges),
-//                isDescendantOfA(withId(R.id.tabs))))
-//                .perform(click());
-
-//        onView(withText(R.string.tab_title_badges)).perform(click());
-
-        assertEquals(0, badgesList.size());
+        assertEquals(0, badgeList.size());
 
     }
 
@@ -414,11 +397,6 @@ public class MainActivityUITest {
                 .inRoot(RootMatchers.withDecorView(
                         Matchers.is(mainActivityTestRule.getActivity().getWindow().getDecorView())))
                 .perform(RecyclerViewActions.actionOnItemAtPosition(0, longClick()));
-
-//        onData(anything())
-//                .inAdapterView(withId(R.id.recycler_courses))
-//                .atPosition(0)
-//                .perform(longClick());
 
         onView(withId(R.id.course_context_delete))
                 .perform(click());
@@ -534,7 +512,6 @@ public class MainActivityUITest {
     private void checkCorrectActivities(Class activity1, Class activity2) {
         assertThat(Utils.TestUtils.getCurrentActivity().getClass(), Matchers.either(Matchers.equalTo(activity1)).or(Matchers.equalTo(activity2)));
     }
-
 
 
     @Test
@@ -697,38 +674,46 @@ public class MainActivityUITest {
 
     }
 
+    @Test
+    public void returnsToMainScreenWhenBackArrowButtonInCourseIndexScreenIsClicked() throws Exception {
 
 
-   /* @Test
-    public void downloadCourse(){
-        onView(withId(R.id.drawer))
-                .perform(DrawerActions.open());
+        final CompleteCourse completeCourse = CourseUtils.createMockCompleteCourse(5, 7);
+        Mockito.doAnswer((Answer<Void>) invocation -> {
+            Context ctx = (Context) invocation.getArguments()[0];
+            ((ParseCourseXMLTask.OnParseXmlListener) ctx).onParseComplete(completeCourse);
 
-        onView(withText(R.string.menu_download))
-                .perform(click());
+            return null;
 
-        onData(anything())
-                .inAdapterView(withId(R.id.tag_list))
-                .atPosition(0)
-                .perform(click());
+        }).when(completeCourseProvider).getCompleteCourseAsync(any(Context.class), any(Course.class));
 
-        onData(anything())
-                .inAdapterView(withId(R.id.tag_list))
-                .atPosition(0)
-                .onChildView(withId(R.id.download_course_btn))
-                .perform(click(), pressBack());
+        givenThereAreSomeCourses(1);
 
-        onData(anything())
-                .inAdapterView(withId(R.id.tag_list))
-                .atPosition(0)
-                .perform(pressBack());
+        mainActivityTestRule.launchActivity(null);
 
-        int coursesCount = getCoursesCount();
-
-        assertTrue(coursesCount > 0);
+        onView(withId(R.id.recycler_courses))
+                .inRoot(RootMatchers.withDecorView(
+                        Matchers.is(mainActivityTestRule.getActivity().getWindow().getDecorView())))
+                .perform(RecyclerViewActions.actionOnItemAtPosition(0, click()));
 
 
-    }*/
+        checkCorrectActivity(CourseIndexActivity.class);
 
+        onView(withContentDescription(R.string.abc_action_bar_up_description)).perform(click());
 
+        checkCorrectActivity(MainActivity.class);
+
+    }
+
+    @Test
+    public void showsEditProfileActivityOnMenuItemClick() throws Exception {
+
+        mainActivityTestRule.launchActivity(null);
+
+        openDrawer();
+        onView(withId(R.id.btn_expand_profile_options)).perform(click());
+        onView(withText(R.string.edit_profile)).perform(click());
+        checkCorrectActivity(EditProfileActivity.class);
+
+    }
 }

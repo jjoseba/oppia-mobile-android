@@ -20,6 +20,7 @@ import org.digitalcampus.mobile.learning.R;
 public class ExpandableRecyclerView extends RecyclerView
 {
 
+    private static final String TAG = ExpandableRecyclerView.class.getSimpleName();
 
     public ExpandableRecyclerView(Context context)
     {
@@ -144,7 +145,7 @@ public class ExpandableRecyclerView extends RecyclerView
     }
 
 
-    public static abstract class Adapter<CVH extends ViewHolder, GVH extends ViewHolder, HVH extends ViewHolder, C, G> extends RecyclerView.Adapter<ViewHolder>
+    public abstract static class Adapter<CVH extends ViewHolder, GVH extends ViewHolder, HVH extends ViewHolder, C, G> extends RecyclerView.Adapter<ViewHolder>
     {
 
         private OnChildItemClickedListener onChildItemClickedListener;
@@ -317,17 +318,14 @@ public class ExpandableRecyclerView extends RecyclerView
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType)
         {
-            Log.d("Expand", "type:" + viewType);
+            Log.d(TAG, "type:" + viewType);
             switch (viewType){
-                case TYPE_HEADER: {
+                case TYPE_HEADER:
                     return onCreateHeaderViewHolder(parent);
-                }
-                case TYPE_GROUP_HEADER: {
+                case TYPE_GROUP_HEADER:
                     return onCreateGroupViewHolder(parent);
-                }
-                default:{
+                default:
                     return onCreateChildViewHolder(parent, viewType);
-                }
             }
         }
 
@@ -342,10 +340,10 @@ public class ExpandableRecyclerView extends RecyclerView
         @Override
         public int getItemViewType(int i)
         {
-            Log.d("Expand", "Init:" + i);
+            Log.d(TAG, "Init:" + i);
             if (headerVisible){
                 if (i == 0){
-                    Log.d("Expand",  "Header:" + i);
+                    Log.d(TAG,  "Header:" + i);
                     return TYPE_HEADER;
                 }
                 else{
@@ -382,15 +380,12 @@ public class ExpandableRecyclerView extends RecyclerView
         public abstract void onBindHeaderViewHolder(HVH holder);
 
         public void onBindChildViewHolder(CVH holder, final int group, final int position) {
-            holder.itemView.setOnClickListener(new OnClickListener()
-            {
-                public void onClick(View v) {
-                    if (Adapter.this.onChildItemClickedListener != null)
-                    {
-                        Adapter.this.onChildItemClickedListener.onChildItemClicked(group, position);
-                    }
-
+            holder.itemView.setOnClickListener(v -> {
+                if (Adapter.this.onChildItemClickedListener != null)
+                {
+                    Adapter.this.onChildItemClickedListener.onChildItemClicked(group, position);
                 }
+
             });
         }
 
@@ -399,24 +394,21 @@ public class ExpandableRecyclerView extends RecyclerView
             if (holder instanceof GroupViewHolder)
                 ((GroupViewHolder) holder).setExpanded(isExpanded(group));
 
-            holder.itemView.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (isExpanded(group)) {
-                        collapse(group);
-                        if (holder instanceof GroupViewHolder)
-                            ((GroupViewHolder) holder).collapse();
-                    } else {
-                        expand(group);
-                        if (holder instanceof GroupViewHolder)
-                            ((GroupViewHolder) holder).expand();
-                    }
+            holder.itemView.setOnClickListener(v -> {
+                if (isExpanded(group)) {
+                    collapse(group);
+                    if (holder instanceof GroupViewHolder)
+                        ((GroupViewHolder) holder).collapse();
+                } else {
+                    expand(group);
+                    if (holder instanceof GroupViewHolder)
+                        ((GroupViewHolder) holder).expand();
                 }
             });
         }
     }
 
-    public static abstract class GroupViewHolder extends RecyclerView.ViewHolder
+    public abstract static class GroupViewHolder extends RecyclerView.ViewHolder
     {
 
         ImageView expandedIndicator;
@@ -432,12 +424,9 @@ public class ExpandableRecyclerView extends RecyclerView
             ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
             animator.setInterpolator(new DecelerateInterpolator());
             animator.setDuration(200);
-            animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    expandedIndicator.setRotation(180 * (float) (animation.getAnimatedValue()));
-                    expandedIndicator.postInvalidate();
-                }
+            animator.addUpdateListener(animation -> {
+                expandedIndicator.setRotation(180 * (float) (animation.getAnimatedValue()));
+                expandedIndicator.postInvalidate();
             });
             animator.start();
             expanded = true;
@@ -447,12 +436,9 @@ public class ExpandableRecyclerView extends RecyclerView
             ValueAnimator animator = ValueAnimator.ofFloat(1, 0);
             animator.setInterpolator(new DecelerateInterpolator());
             animator.setDuration(200);
-            animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    expandedIndicator.setRotation(180 * (float) (animation.getAnimatedValue()));
-                    expandedIndicator.postInvalidate();
-                }
+            animator.addUpdateListener(animation -> {
+                expandedIndicator.setRotation(180 * (float) (animation.getAnimatedValue()));
+                expandedIndicator.postInvalidate();
             });
             animator.start();
             expanded = false;

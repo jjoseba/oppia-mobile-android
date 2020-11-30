@@ -19,12 +19,14 @@ package org.digitalcampus.oppia.fragments;
 
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.DialogInterface;
 import android.os.Bundle;
-import androidx.appcompat.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+
+import androidx.appcompat.app.AlertDialog;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
@@ -32,50 +34,52 @@ import org.digitalcampus.oppia.utils.ui.SimpleAnimator;
 
 public class PasswordDialogFragment extends DialogFragment {
 
-        private AdminSecurityManager.AuthListener listener;
+    private AdminSecurityManager.AuthListener listener;
 
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.Oppia_AlertDialogStyle);
-            LayoutInflater inflater = getActivity().getLayoutInflater();
-
-            builder.setView(inflater.inflate(R.layout.dialog_password, null))
-                    .setPositiveButton(R.string.ok, null)
-                    .setNegativeButton(android.R.string.cancel, null);
-            return builder.create();
-        }
-
+    /**      
+     * @deprecated
+     */
     @Override
-    public void onStart()
-    {
+    @Deprecated
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.Oppia_AlertDialogStyle);
+        LayoutInflater inflater = getActivity().getLayoutInflater();
+
+        builder.setView(inflater.inflate(R.layout.dialog_password, null))
+                .setPositiveButton(R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null);
+        return builder.create();
+    }
+
+    /**      
+     * @deprecated
+     */
+    @Override
+    @Deprecated
+    public void onStart() {
         super.onStart();
         final AlertDialog d = (AlertDialog)getDialog();
-        if(d != null)
-        {
-            Button positiveButton = d.getButton(Dialog.BUTTON_POSITIVE);
-            positiveButton.setOnClickListener(new View.OnClickListener()
-            {
-                public void onClick(View v)
-                {
-                    EditText passwordField = d.findViewById(R.id.admin_password_field);
-                    View errorMessage = d.findViewById(R.id.admin_password_error);
-                    String password = passwordField.getText().toString();
+        if(d != null) {
+            Button positiveButton = d.getButton(DialogInterface.BUTTON_POSITIVE);
+            positiveButton.setOnClickListener(v -> {
+                EditText passwordField = d.findViewById(R.id.admin_password_field);
+                View errorMessage = d.findViewById(R.id.admin_password_error);
+                String password = passwordField.getText().toString();
 
-                    //If the user leave the input blank, we don't perform any action
-                    if (password.equals("")) return;
+                //If the user leave the input blank, we don't perform any action
+                if (password.equals("")) return;
 
-                    boolean passCorrect = AdminSecurityManager.checkAdminPassword(PasswordDialogFragment.this.getActivity(), password);
-                    if(passCorrect) {
-                        d.dismiss();
-                        if (listener != null) {
-                            listener.onPermissionGranted();
-                        }
+                boolean passCorrect = AdminSecurityManager.with(getActivity()).checkAdminPassword(password);
+                if(passCorrect) {
+                    d.dismiss();
+                    if (listener != null) {
+                        listener.onPermissionGranted();
                     }
-                    else{
-                        errorMessage.setVisibility(View.VISIBLE);
-                        SimpleAnimator.fade(errorMessage, SimpleAnimator.FADE_IN);
-                        passwordField.setText("");
-                    }
+                }
+                else{
+                    errorMessage.setVisibility(View.VISIBLE);
+                    SimpleAnimator.fade(errorMessage, SimpleAnimator.FADE_IN);
+                    passwordField.setText("");
                 }
             });
         }

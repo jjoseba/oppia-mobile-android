@@ -1,38 +1,9 @@
-
 plugins {
     id "org.sonarqube" version "2.8"
 }
 
-sonarqube {
-    properties {
-        property "sonar.projectKey", "org.digitalcampus.mobile.learning"
-        property "sonar.projectName", "Oppia-Android"
-        property "sonar.projectVersion", "1.0"
-        property "sonar.exclusions", "robospice/**/*"
-        property "sonar.host.url", "https://sonarcloud.io" // TODO: - Setup your Sonarqube server address
-
-        property "sonar.sources", "src/main/java"
-        property "sonar.binaries", "build/intermediates/app_classes/normalDebug"
-        property "sonar.java.binaries", "build/intermediates/app_classes/normalDebug"
-        property "sonar.tests", "src/test/java, src/androidTest/java"
-        property "sonar.java.test.binaries", "build/intermediates/app_classes/normalDebug"
-
-        def unit = fileTree(dir: project.projectDir, includes: ['**/*.exec']).files;
-        def ui = fileTree(dir: project.projectDir, includes: ['**/*.ec']).files;
-        unit.addAll(ui);
-        def files = unit.join(", ");
-
-        property "sonar.coverage.jacoco.xmlReportPaths", files
-        property "sonar.java.coveragePlugin", "jacoco-android"
-        property "sonar.junit.reportsPath", "build/test-results/testDebugUnitTest"
-        property "sonar.android.lint.report", "build/reports/lint-results.xml"
-    }
-}
-
 apply plugin: 'com.android.application'
-apply plugin: 'jacoco-android'
-//apply plugin: 'com.neenbedankt.android-apt'
-apply plugin: "org.sonarqube"
+apply plugin: "com.hiya.jacoco-android"
 
 repositories {
     maven { url "https://mint.splunk.com/gradle/" }
@@ -40,28 +11,26 @@ repositories {
 }
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '28.0.3'
+    compileSdkVersion 29
+    buildToolsVersion '29.0.2'
 
     defaultConfig {
-        versionCode 72
-        versionName "7.0.2"
+        versionCode 82
+        versionName "7.1.6"
 
         applicationId "org.digitalcampus.mobile.learning"
-        minSdkVersion 14
-        targetSdkVersion 28
+
+        minSdkVersion 21
+        targetSdkVersion 29
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
-
-//        multiDexEnabled true
-
     }
 
     //Add the version_name value to strings resources
     applicationVariants.all { variant ->
         variant.resValue "string", "version_name", variant.versionName
     }
-
 
     packagingOptions {
         exclude 'META-INF/LICENSE.txt'
@@ -75,8 +44,14 @@ android {
         disable 'MissingTranslation', 'ExtraTranslation'
     }
 
+    // Configure to use Java8 features like try-with-resources
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 
-    def Properties runtimeProps = new Properties()
+
+    Properties runtimeProps = new Properties()
     runtimeProps.load(new FileInputStream(rootProject.file('oppia-default.properties')))
 
     def oppiaPropsFile = rootProject.file('custom.properties')
@@ -127,6 +102,8 @@ android {
             buildConfigField "int", "ADMIN_PASSWORD_OVERRIDE_VERSION", runtimeProps['ADMIN_PASSWORD_OVERRIDE_VERSION']
             buildConfigField "String", "ADMIN_PROTECT_INITIAL_PASSWORD", "\"" + runtimeProps['ADMIN_PROTECT_INITIAL_PASSWORD'] + "\""
 
+            buildConfigField "int", "LOAD_CUSTOMFIELDS_VERSION", runtimeProps['LOAD_CUSTOMFIELDS_VERSION']
+
             buildConfigField "boolean", "START_COURSEINDEX_COLLAPSED", runtimeProps['START_COURSEINDEX_COLLAPSED']
             resValue "string", "MENU_ALLOW_LOGOUT_DEFAULT_VALUE", runtimeProps['MENU_ALLOW_LOGOUT']
             resValue "string", "MENU_ALLOW_COURSE_DOWNLOAD_DEFAULT_VALUE", runtimeProps['MENU_ALLOW_COURSE_DOWNLOAD']
@@ -134,6 +111,7 @@ android {
             resValue "string", "START_COURSEINDEX_COLLAPSED", runtimeProps['START_COURSEINDEX_COLLAPSED']
             resValue "string", "prefServerDefault", runtimeProps['OPPIA_SERVER_DEFAULT']
             resValue "string", "oppiaServerHost", runtimeProps['OPPIA_SERVER_HOST']
+            resValue "string", "oppiaServerDomain", runtimeProps['OPPIA_SERVER_DOMAIN']
             resValue "string", "prefAdminPasswordDefault", runtimeProps['ADMIN_PROTECT_INITIAL_PASSWORD']
             resValue "string", "prefGamificationPointsAnimationDefault", runtimeProps['GAMIFICATION_POINTS_ANIMATION']
             resValue "string", "prefDurationGamificationPointsViewDefault", runtimeProps['DURATION_GAMIFICATION_POINTS_VIEW']
@@ -142,10 +120,10 @@ android {
         }
 
         debug {
+            multiDexEnabled true
             testCoverageEnabled = true
             debuggable = true
         }
-
 
         release {
             minifyEnabled false
@@ -166,99 +144,105 @@ android {
         }
     }
 
-
     flavorDimensions "main"
 
     productFlavors {
         normal { dimension "main" }
-        admin { dimension "main" }
     }
-
 
     useLibrary 'android.test.mock'
 
-
+    android.buildFeatures.viewBinding = true
 }
 
-// Setup Jacoco version. It's recomended way to exclude conflicts beetwen components
+// Setup Jacoco version. It's recommended way to exclude conflicts between components
 jacoco {
     toolVersion = "0.8.3"
 }
 
-// Setup jacoco report format. We need xml for Sonarqube
-jacocoAndroidUnitTestReport {
-    csv.enabled false
-    html.enabled true
-    xml.enabled true
-
-}
 
 dependencies {
+    def workVersion = '2.3.4'
+    def roomVersion = "1.1.1"
+    def fragmentVersion = '1.2.4'
+    def daggerVersion = '2.26'
 
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'joda-time:joda-time:2.3'
-    implementation 'com.google.android.material:material:1.0.0'
-    implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.preference:preference:1.0.0'
-    implementation 'com.squareup.picasso:picasso:2.71828'
-    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
-    implementation 'com.squareup.okhttp3:logging-interceptor:3.9.1'
-    implementation 'com.splunk.mint:mint:5.0.0'
+    implementation 'com.google.android.material:material:1.1.0'
     implementation 'com.google.android:flexbox:0.2.5'
-    implementation 'io.github.inflationx:calligraphy3:3.0.0'
-    implementation 'io.github.inflationx:viewpump:1.0.0'
+
+    implementation 'androidx.core:core:1.3.0'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.preference:preference:1.1.1'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
+    implementation 'androidx.navigation:navigation-fragment:2.2.2'
+    implementation 'androidx.navigation:navigation-ui:2.2.2'
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.concurrent:concurrent-futures:1.1.0-alpha01'
+    implementation "android.arch.persistence.room:runtime:$roomVersion"
+    implementation "androidx.work:work-runtime:$workVersion"
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    androidTestImplementation "androidx.work:work-testing:$workVersion"
+    annotationProcessor "android.arch.persistence.room:compiler:$roomVersion"
+
+    implementation 'javax.xml.stream:stax-api:1.0'
+    implementation 'com.squareup.picasso:picasso:2.71828'
+    implementation 'com.squareup.okhttp3:okhttp:4.4.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.4.0'
+    implementation 'com.splunk.mint:mint:5.0.0'
+    implementation 'io.github.inflationx:calligraphy3:3.1.1'
+    implementation 'io.github.inflationx:viewpump:2.0.3'
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    implementation 'com.mikhaellopez:circularprogressbar:3.0.3'
+    implementation 'com.github.badoualy:stepper-indicator:1.0.7'
+
+    //Dagger Dependencies
+    implementation "com.google.dagger:dagger:$daggerVersion"
+    implementation "com.google.dagger:dagger-android:$daggerVersion"
+    implementation "com.google.dagger:dagger-android-support:$daggerVersion"
+    annotationProcessor "com.google.dagger:dagger-android-processor:$daggerVersion"
+    annotationProcessor "com.google.dagger:dagger-compiler:$daggerVersion"
+    androidTestImplementation 'com.github.fabioCollini.daggermock:daggermock:0.8.5'
+
+    implementation "com.squareup.inject:assisted-inject-annotations-dagger2:0.3.3"
 
     //JUnit Dependencies
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    implementation 'androidx.vectordrawable:vectordrawable:1.0.1'
-    implementation 'androidx.navigation:navigation-fragment:2.0.0'
-    implementation 'androidx.navigation:navigation-ui:2.0.0'
-    implementation 'androidx.lifecycle:lifecycle-extensions:2.0.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.squareup.okhttp3:mockwebserver:3.3.1'
-    androidTestImplementation 'androidx.test:runner:1.2.0'
-    androidTestImplementation 'androidx.test:rules:1.2.0'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.annotation:annotation:1.0.0'
+    testImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'com.squareup.okhttp3:mockwebserver:4.4.0'
+    androidTestImplementation 'androidx.test:runner:1.3.0'
+    androidTestImplementation 'androidx.test:rules:1.3.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.annotation:annotation:1.1.0'
+
     //Espresso Dependencies
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    androidTestImplementation('androidx.test.espresso:espresso-contrib:3.1.0') {
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    androidTestImplementation('androidx.test.espresso:espresso-contrib:3.3.0') {
         exclude module: 'support-annotations'
         exclude module: 'support-v4'
         exclude module: 'support-v13'
         exclude module: 'recyclerview-v7'
         exclude module: 'appcompat-v7'
-        exclude module: 'design'
     }
 
-    //Mockito Dependenciesst
-    androidTestImplementation 'org.mockito:mockito-core:1.10.19'
+    // Fragment testing
+    implementation "androidx.fragment:fragment:$fragmentVersion"
+    debugImplementation("androidx.fragment:fragment-testing:$fragmentVersion") {
+        // exclude androidx.test:core while fragment_testing depends on 1.1.0
+        exclude group: 'androidx.test', module: 'core'
+    }
+
+    //Mockito Dependencies
+    testImplementation 'org.mockito:mockito-core:2.4.0'
+
+    def multidex_version = "2.0.1"
+    implementation "androidx.multidex:multidex:$multidex_version"
     androidTestImplementation 'com.google.dexmaker:dexmaker:1.2'
     androidTestImplementation 'com.google.dexmaker:dexmaker-mockito:1.2'
-    //Dagger Dependencies
-    implementation "com.google.dagger:dagger:2.11"
-    implementation "com.google.dagger:dagger-android-support:2.11"
-    annotationProcessor "com.google.dagger:dagger-android-processor:2.11"
-    annotationProcessor "com.google.dagger:dagger-compiler:2.11"
 
-//    implementation 'javax.annotation:jsr250-api:1.0' /*compileOnly*/
-    implementation 'org.glassfish:javax.annotation:10.0-b28'
-//    androidTestImplementation 'com.github.fabioCollini:DaggerMock:0.8.2'
-    androidTestImplementation 'com.github.fabioCollini.daggermock:daggermock:0.8.5'
-
-    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
-
-    implementation 'com.mikhaellopez:circularprogressbar:3.0.3'
-
-    def work_version = "2.2.0"
-    implementation "androidx.work:work-runtime:$work_version"
-    implementation 'androidx.concurrent:concurrent-futures:1.0.0-rc01'
-    androidTestImplementation "androidx.work:work-testing:$work_version"
-
-    implementation 'javax.xml.stream:stax-api:1.0-2'
-
-//    implementation 'androidx.multidex:multidex:2.0.1'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
 
 //    debugImplementation 'im.dino:dbinspector:3.4.1@aar'
 
@@ -277,8 +261,6 @@ task grantPermissions(type: Exec, dependsOn: 'installNormalDebug') {
     }
 
     commandLine "${adb} shell pm grant ${android.defaultConfig.applicationId} android.permission.SET_ANIMATION_SCALE".split(' ')
-    // commandLine "${adb} shell pm grant org.digitalcampus.mobile.learning android.permission.SET_ANIMATION_SCALE --stacktrace".split(" ")
-
 }
 
 tasks.whenTaskAdded { task ->
@@ -290,43 +272,34 @@ tasks.whenTaskAdded { task ->
     }
 }
 
-// Test coverage tasks
-def androidExclusion = [
-        '**/databinding/**/*.*',
-        '**/android/databinding/*Binding.*',
-        '**/BR.*',
-        '**/R.*',
-        '**/R$*.*',
-        '**/BuildConfig.*',
-        '**/Manifest*.*',
-        '**/*_MembersInjector.*',
-        '**/Dagger*Component.*',
-        '**/Dagger*Component$Builder.*',
-        '**/*Module_*Factory.*',
-        '**/*Fragment*.*',
-        '**/*Activity*.*',
-        '**/*Adapter*.*',
-        '**/*ViewPager*.*',
-        '**/*ViewHolder*.*',
-        '**/*Module*.*'
-]
+sonarqube {
+    properties {
+        property "sonar.projectVersion", android.defaultConfig.versionName
+        property "sonar.projectName", "Oppia Core app"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.sources", "src/main/java"
+        property "sonar.binaries", "build/intermediates/app_classes/normalDebug"
+        property "sonar.java.binaries", "build/intermediates/app_classes/normalDebug"
+        property "sonar.tests", "src/test/java, src/androidTest/java"
+        property "sonar.java.test.binaries", "build/intermediates/app_classes/normalDebug"
+        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/coverage/normal/debug/report.xml"
+        property "sonar.exclusions", "app/src/test/java/**/*, app/src/androidTest/java/**/*, " +
+                "src/test/java/**/*, src/androidTest/**/*, src/test/java, src/androidTest/java"
+        property "sonar.test.exclusions", "app/src/test/java/**/*, app/src/androidTest/java/**/*, " +
+                "src/test/java/**/*, src/androidTest/**/*, src/test/java, src/androidTest/java"
+        property "sonar.coverage.exclusions", "app/src/test/java/**/*, app/src/androidTest/java/**/*, " +
+                "src/test/java/**/*, src/androidTest/**/*, src/test/java, src/androidTest/java"
 
-task codeCoverageReport(type: JacocoReport, dependsOn: 'testNormalDebugUnitTest') {
-    group = "Reporting"
-    description = "Generate Jacoco coverage reports after running tests."
-    reports {
-        xml.enabled = true
-        html.enabled = true
+        def sonarqubePropsFile = rootProject.file('sonarqube.properties')
+        if (sonarqubePropsFile.canRead()) {
+            def sonarqubeProps = new Properties()
+            sonarqubeProps.load(new FileInputStream(sonarqubePropsFile))
+
+            property "sonar.projectKey", sonarqubeProps["sonar.projectKey"]
+            property "sonar.organization", sonarqubeProps["sonar.organization"]
+            property "sonar.login", sonarqubeProps["sonar.login"]
+        }
     }
-    classDirectories = fileTree(
-            dir: 'build/intermediates/classes/normal/debug/org/digitalcampus',
-            excludes: androidExclusion
-    )
-    sourceDirectories = files('src/main/java/org/digitalcampus')
-    executionData = files('build/jacoco/testNormalDebugUnitTest.exec')
 }
-
-task getCoverage(type: Exec, dependsOn: 'codeCoverageReport') {
-    group = "Reporting"
-    //commandLine "open", "$buildDir/reports/jacoco/codeCoverageReport/html/index.html"
-}
+tasks.sonarqube.dependsOn connectedCheck
+tasks.sonarqube.dependsOn jacocoTestReport

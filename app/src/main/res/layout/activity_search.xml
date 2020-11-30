@@ -33,12 +33,14 @@
 
             <ImageView
                 android:id="@+id/searchbutton"
-                android:layout_width="wrap_content"
+                android:layout_width="35dp"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentRight="true"
+                android:layout_alignTop="@id/search_string"
+                android:layout_alignBottom="@id/search_string"
                 android:contentDescription="@string/search.activity_title"
-                android:src="@drawable/abs__ic_search"
+                app:srcCompat="@drawable/ic_search"
                 android:tint="@color/highlight_label" />
 
         </RelativeLayout>
@@ -59,13 +61,12 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <ListView
-                android:id="@+id/search_results_list"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_results_search"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:dividerHeight="0dp"
-                android:divider="@color/transparent"
-                android:listSelector="@color/transparent" />
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                android:orientation="vertical"/>
 
             <ProgressBar
                 android:id="@+id/progressBar"

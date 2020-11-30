@@ -21,7 +21,6 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,9 +31,9 @@ import android.webkit.WebViewClient;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.CourseActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.application.DbHelper;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.gamification.GamificationServiceDelegate;
 import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.Course;
@@ -46,11 +45,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 
-public class PageWidget extends WidgetFactory {
+import androidx.annotation.NonNull;
+import androidx.core.text.HtmlCompat;
+
+public class PageWidget extends BaseWidget {
 
 	public static final String TAG = PageWidget.class.getSimpleName();
 
@@ -73,23 +75,22 @@ public class PageWidget extends WidgetFactory {
 	@SuppressWarnings("unchecked")
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		prefs = PreferenceManager.getDefaultSharedPreferences(super.getActivity());
 		View vv = inflater.inflate(R.layout.fragment_webview, container, false);
 
 		activity = (Activity) getArguments().getSerializable(Activity.TAG);
 		course = (Course) getArguments().getSerializable(Course.TAG);
 		isBaseline = getArguments().getBoolean(CourseActivity.BASELINE_TAG);
 		vv.setId(activity.getActId());
-		if ((savedInstanceState != null) && (savedInstanceState.getSerializable(WidgetFactory.WIDGET_CONFIG) != null)){
-			setWidgetConfig((HashMap<String, Object>) savedInstanceState.getSerializable(WidgetFactory.WIDGET_CONFIG));
+		if ((savedInstanceState != null) && (savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG) != null)){
+			setWidgetConfig((HashMap<String, Object>) savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG));
 		}
 		return vv;
 	}
 
 	@Override
-	public void onSaveInstanceState(Bundle outState) {
+	public void onSaveInstanceState(@NonNull Bundle outState) {
 		super.onSaveInstanceState(outState);
-		outState.putSerializable(WidgetFactory.WIDGET_CONFIG, getWidgetConfig());
+		outState.putSerializable(BaseWidget.WIDGET_CONFIG, (Serializable) getWidgetConfig());
 	}
 	
 	@Override
@@ -97,9 +98,7 @@ public class PageWidget extends WidgetFactory {
 		super.onActivityCreated(savedInstanceState);
 		WebView wv = super.getActivity().findViewById(activity.getActId());
 		// get the location data
-		String url = course.getLocation()
-				+ activity.getLocation(prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault()
-						.getLanguage()));
+		String url = course.getLocation() + activity.getLocation(prefLang);
 		
 		int defaultFontSize = Integer.parseInt(prefs.getString(PrefsActivity.PREF_TEXT_SIZE, "16"));
 		wv.getSettings().setDefaultFontSize(defaultFontSize);
@@ -109,7 +108,7 @@ public class PageWidget extends WidgetFactory {
             //We inject the interface to launch intents from the HTML
             wv.addJavascriptInterface(
                     new JSInterfaceForResourceImages(this.getActivity(), course.getLocation()),
-                    JSInterfaceForResourceImages.InterfaceExposedName);
+                    JSInterfaceForResourceImages.INTERFACE_EXPOSED_NAME);
 
 			wv.loadDataWithBaseURL("file://" + course.getLocation() + File.separator, FileUtils.readFile(url), "text/html", "utf-8", null);
 		} catch (IOException e) {
@@ -122,17 +121,21 @@ public class PageWidget extends WidgetFactory {
             @Override
             public void onPageFinished(WebView view, String url) {
                 //We execute the necessary JS code to bind click on images with our JavascriptInterface
-                view.loadUrl(JSInterfaceForResourceImages.JSInjection);
+                view.loadUrl(JSInterfaceForResourceImages.JS_INJECTION);
             }
 
             // set up the page to intercept videos
+			/**      
+			 * @deprecated (replace as soon as possible)
+			 */
 			@Override
+			@Deprecated
 			public boolean shouldOverrideUrlLoading(WebView view, String url) {
 
 				if (url.contains("/video/")) {
 					// extract video name from url
 					int startPos = url.indexOf("/video/") + 7;
-					String mediaFileName = url.substring(startPos, url.length());
+					String mediaFileName = url.substring(startPos);
 					PageWidget.super.startMediaPlayerWithFile(mediaFileName);
                     return true;
 					
@@ -153,6 +156,7 @@ public class PageWidget extends WidgetFactory {
 		});
 	}
 
+	@Override
 	public void setIsBaseline(boolean isBaseline) {
 		this.isBaseline = isBaseline;
 	}
@@ -160,7 +164,7 @@ public class PageWidget extends WidgetFactory {
 	public boolean getActivityCompleted() {
 		// only show as being complete if all the videos on this page have been played
 		if (this.activity.hasMedia()) {
-			ArrayList<Media> mediaList = this.activity.getMedia();
+			ArrayList<Media> mediaList = (ArrayList<Media>) this.activity.getMedia();
 			boolean completed = true;
 			DbHelper db = DbHelper.getInstance(super.getActivity());
 			long userId = db.getUserId(SessionManager.getUsername(getActivity()));
@@ -181,7 +185,7 @@ public class PageWidget extends WidgetFactory {
 		}
 		long timetaken = this.getSpentTime();
 		// only save tracker if over the time
-		if (timetaken < MobileLearning.PAGE_READ_TIME) {
+		if (timetaken < App.PAGE_READ_TIME) {
 			return;
 		}
 
@@ -192,47 +196,41 @@ public class PageWidget extends WidgetFactory {
 
 	@Override
 	public void setWidgetConfig(HashMap<String, Object> config) {
-		if (config.containsKey(WidgetFactory.PROPERTY_ACTIVITY_STARTTIME)) {
-			this.setStartTime((Long) config.get(WidgetFactory.PROPERTY_ACTIVITY_STARTTIME));
+		if (config.containsKey(BaseWidget.PROPERTY_ACTIVITY_STARTTIME)) {
+			this.setStartTime((Long) config.get(BaseWidget.PROPERTY_ACTIVITY_STARTTIME));
 		}
-		if (config.containsKey(WidgetFactory.PROPERTY_ACTIVITY)) {
-			activity = (Activity) config.get(WidgetFactory.PROPERTY_ACTIVITY);
+		if (config.containsKey(BaseWidget.PROPERTY_ACTIVITY)) {
+			activity = (Activity) config.get(BaseWidget.PROPERTY_ACTIVITY);
 		}
-		if (config.containsKey(WidgetFactory.PROPERTY_COURSE)) {
-			course = (Course) config.get(WidgetFactory.PROPERTY_COURSE);
+		if (config.containsKey(BaseWidget.PROPERTY_COURSE)) {
+			course = (Course) config.get(BaseWidget.PROPERTY_COURSE);
 		}
 	}
 
 	@Override
 	public HashMap<String, Object> getWidgetConfig() {
 		HashMap<String, Object> config = new HashMap<>();
-		config.put(WidgetFactory.PROPERTY_ACTIVITY_STARTTIME, this.getStartTime());
-		config.put(WidgetFactory.PROPERTY_ACTIVITY, this.activity);
-		config.put(WidgetFactory.PROPERTY_COURSE, this.course);
+		config.put(BaseWidget.PROPERTY_ACTIVITY_STARTTIME, this.getStartTime());
+		config.put(BaseWidget.PROPERTY_ACTIVITY, this.activity);
+		config.put(BaseWidget.PROPERTY_COURSE, this.course);
 		return config;
 	}
 
 	public String getContentToRead() {
 		File f = new File(File.separator + course.getLocation() + File.separator
-				+ activity.getLocation(prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault()
-						.getLanguage())));
+				+ activity.getLocation(prefLang));
 		StringBuilder text = new StringBuilder();
-		BufferedReader br = null;
-		try {
-			br = new BufferedReader(new FileReader(f));
+		try (BufferedReader reader = new BufferedReader(new FileReader(f))){
 			String line;
-
-			while ((line = br.readLine()) != null) {
+			while ((line = reader.readLine()) != null) {
 				text.append(line);
 			}
-
 		} catch (IOException e) {
 			Log.e(TAG, "getContentToRead: ", e);
 			return "";
-		} finally {
-			try { br.close();}catch (Exception e) {}
 		}
-		return android.text.Html.fromHtml(text.toString()).toString();
+
+		return HtmlCompat.fromHtml(text.toString(), HtmlCompat.FROM_HTML_MODE_LEGACY).toString();
 	}
 
 

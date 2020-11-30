@@ -24,7 +24,7 @@ import android.util.Log;
 import com.splunk.mint.Mint;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.application.DbHelper;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.listener.PreloadAccountsListener;
 import org.digitalcampus.oppia.model.DownloadProgress;
@@ -44,7 +44,7 @@ public class PreloadAccountsTask extends AsyncTask<Payload, DownloadProgress, Pa
 
     private static final String CSV_SEPARATOR = ",";
     private static final String CSV_USERNAME_COLUMN = "username";
-    private static final String CSV_PASSWORD_COLUMN = "password"; //NOSONAR
+    private static final String CSV_PASSWORD_COLUMN = "password";
     private static final String CSV_APIKEY_COLUMN = "apikey";
     private static final String CSV_EMAIL_COLUMN = "email";
     private static final String CSV_FIRSTNAME_COLUMN = "first_name";
@@ -62,16 +62,19 @@ public class PreloadAccountsTask extends AsyncTask<Payload, DownloadProgress, Pa
         File csvAccounts = new File(csvPath);
 
         if (csvAccounts.exists()){
-            BufferedReader reader = null;
-            try {
-                String line;
-                reader = new BufferedReader(new FileReader(csvAccounts));
+            try (FileReader fileReader = new FileReader(csvAccounts);
+                 BufferedReader reader = new BufferedReader(fileReader)){
+
                 DbHelper db = DbHelper.getInstance(ctx);
-                int usernameColumn = -1, apikeyColumn = -1, passwordColumn = -1;
-                int emailColumn = -1, firstNameColumn = -1, lastNameColumn = -1;
+                int usernameColumn = -1;
+                int apikeyColumn = -1;
+                int passwordColumn = -1;
+                int emailColumn = -1;
+                int firstNameColumn = -1;
+                int lastNameColumn = -1;
                 int usersAdded = 0;
 
-                line = reader.readLine(); //We read first line to get headers
+                String line = reader.readLine(); //We read first line to get headers
                 if (line != null){
                     String[] headerData = line.split(CSV_SEPARATOR);
                     for (int i=0; i<headerData.length; i++){
@@ -135,14 +138,8 @@ public class PreloadAccountsTask extends AsyncTask<Payload, DownloadProgress, Pa
                 payload.setResultResponse(ctx.getString(R.string.error_preloading_accounts));
             }
             finally {
-                try {
-                    if (reader!=null) reader.close();
-                    boolean deleted = csvAccounts.delete();
-                    Log.d(TAG, "CSV file " + (deleted?"":"not ") + "deleted");
-                }
-                catch (IOException e) {
-                    Mint.logException(e);
-                }
+                boolean deleted = csvAccounts.delete();
+                Log.d(TAG, "CSV file " + (deleted?"":"not ") + "deleted");
             }
         }
 

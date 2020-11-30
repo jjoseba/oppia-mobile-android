@@ -20,16 +20,16 @@ package org.digitalcampus.oppia.fragments;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.LineChart;
@@ -42,12 +42,12 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.google.android.material.tabs.TabLayout;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.adapter.PointsListAdapter;
-import org.digitalcampus.oppia.application.DbHelper;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.adapter.PointsAdapter;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.Points;
+import org.digitalcampus.oppia.utils.DateUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -56,32 +56,30 @@ import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.inject.Inject;
 
-public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSelectedListener {
+public class PointsFragment extends AppFragment implements TabLayout.OnTabSelectedListener {
 
     private static final String ARG_COURSE = "arg_course";
 
-    private final int POSITION_TAB_LAST_WEEK = 0;
-    private final int POSITION_TAB_LAST_MONTH = 1;
-    private final int POSITION_TAB_LAST_YEAR = 2;
+    private static final int POSITION_TAB_LAST_WEEK = 0;
+    private static final int POSITION_TAB_LAST_MONTH = 1;
+    private static final int POSITION_TAB_LAST_YEAR = 2;
 
     @Inject
     List<Points> pointsFull;
     List<Points> pointsFiltered = new ArrayList<>();
-    private Map<String, Integer> pointsGrouped = new LinkedHashMap<>(); // LinkedHashMap: ordered by insertion. TreeMap: sorts naturally by key
+    private Map<String, Integer> pointsGrouped = new LinkedHashMap<>();
     private int totalPoints;
-    private PointsListAdapter pointsAdapter;
-    private ListView listView;
+    private RecyclerView recyclerPoints;
     private TextView tvTotalPoints;
-    private TabLayout tabsFilterPoints;
     private LineChart chart;
     List<Integer> yVals = new ArrayList<>();
     List<String> labels = new ArrayList<>();
     private int currentDatesRangePosition;
     private Course course;
+    private PointsAdapter adapterPoints;
 
     public static PointsFragment newInstance(Course course) {
         PointsFragment pointsFragment = new PointsFragment();
@@ -92,9 +90,9 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
     }
 
     private void findViews() {
-        listView = getView().findViewById(R.id.points_list);
+        recyclerPoints = getView().findViewById(R.id.recycler_points);
         tvTotalPoints = getView().findViewById(R.id.tv_total_points);
-        tabsFilterPoints = getView().findViewById(R.id.tabs_filter_points);
+        TabLayout tabsFilterPoints = getView().findViewById(R.id.tabs_filter_points);
         chart = getView().findViewById(R.id.chart);
 
         tabsFilterPoints.addOnTabSelectedListener(this);
@@ -110,15 +108,17 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         findViews();
-        initializeDagger();
+        getAppComponent().inject(this);
         configureChart();
 
         course = (Course) getArguments().getSerializable(ARG_COURSE);
 
         loadPoints();
 
-        pointsAdapter = new PointsListAdapter(super.getActivity(), pointsFiltered);
-        listView.setAdapter(pointsAdapter);
+        recyclerPoints.addItemDecoration(new DividerItemDecoration(getActivity(), DividerItemDecoration.VERTICAL));
+
+        adapterPoints = new PointsAdapter(getActivity(), pointsFiltered);
+        recyclerPoints.setAdapter(adapterPoints);
 
         showPointsFiltered(POSITION_TAB_LAST_WEEK);
 
@@ -131,31 +131,20 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
         chart.getDescription().setEnabled(false);
 
         chart.setPinchZoom(true);
-
-//        chart.setViewPortOffsets(40f, 0f, 40f, 0f);
         chart.offsetLeftAndRight(getResources().getDimensionPixelSize(R.dimen.offset_chart_horizontal));
 
         Legend l = chart.getLegend();
         l.setEnabled(false);
 
         chart.getAxisRight().setEnabled(false);
-//        chart.getXAxis().setEnabled(false);
-
         chart.getAxisLeft().setAxisMinimum(0);
 
         XAxis xAxis = chart.getXAxis();
-
-//        xAxis.setSpaceMin(data.getBarWidth()/2);
-//        xAxis.setSpaceMax(data.getBarWidth()/2);
-
-//        xAxis.setXOffset(widthBetweenObservations);
         xAxis.setGranularity(1);
         xAxis.setGranularityEnabled(true);
-//        xAxis.setCenterAxisLabels(true);
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
         xAxis.setLabelRotationAngle(40);
-//        xAxis.setLabelCount(2);
 
     }
 
@@ -197,7 +186,7 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
 
         tvTotalPoints.setText(String.valueOf(totalPoints));
 
-        pointsAdapter.notifyDataSetChanged();
+        adapterPoints.notifyDataSetChanged();
 
         loadPlot();
     }
@@ -220,12 +209,11 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
         }
 
         LineDataSet dataSet = new LineDataSet(entries, "Label"); // add entries to dataset
-        dataSet.setColor(ContextCompat.getColor(getActivity(), R.color.theme_primary));
+        dataSet.setColor(ContextCompat.getColor(getActivity(), R.color.chart_line_color));
         dataSet.setDrawValues(false);
         dataSet.setDrawFilled(true);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            dataSet.setFillDrawable(getGradientDrawable());
-        }
+        dataSet.setCircleColor(ContextCompat.getColor(getActivity(), R.color.chart_dots_color));
+        dataSet.setFillDrawable(getGradientDrawable());
 
         LineData lineData = new LineData(dataSet);
 
@@ -248,7 +236,6 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
                     Log.i(TAG, "getFormattedValue: exception. value: " + (int) value);
                     return "MAL";
                 }
-//                return String.valueOf(value);
             }
         });
 
@@ -257,8 +244,8 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
 
     private Drawable getGradientDrawable() {
 
-        int colorStart = ContextCompat.getColor(getActivity(), R.color.theme_primary);
-        int colorEnd = ContextCompat.getColor(getActivity(), R.color.theme_secondary_light);
+        int colorStart = ContextCompat.getColor(getActivity(), R.color.chart_gradient_start);
+        int colorEnd = ContextCompat.getColor(getActivity(), R.color.chart_gradient_end);
 
         int alpha = 128;
         int colorStartAlpha = Color.argb(alpha, Color.red(colorStart), Color.green(colorStart), Color.blue(colorStart));
@@ -289,7 +276,7 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
 
         switch (currentDatesRangePosition) {
             case POSITION_TAB_LAST_WEEK:
-                datetimeFormatter = MobileLearning.DATE_FORMAT_DAY_MONTH;
+                datetimeFormatter = DateUtils.DATE_FORMAT_DAY_MONTH;
                 calendarIterate.add(Calendar.DAY_OF_MONTH, -7);
                 while (calendarIterate.before(calendarNow)) {
                     pointsGrouped.put(datetimeFormatter.print(calendarIterate.getTimeInMillis()), 0);
@@ -299,7 +286,7 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
 
             case POSITION_TAB_LAST_MONTH:
 
-                datetimeFormatter = MobileLearning.DATE_FORMAT_DAY_MONTH;
+                datetimeFormatter = DateUtils.DATE_FORMAT_DAY_MONTH;
                 calendarIterate.add(Calendar.MONTH, -1);
                 while (calendarIterate.before(calendarNow)) {
                     pointsGrouped.put(datetimeFormatter.print(calendarIterate.getTimeInMillis()), 0);
@@ -309,7 +296,7 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
 
             case POSITION_TAB_LAST_YEAR:
 
-                datetimeFormatter = MobileLearning.MONTH_FORMAT;
+                datetimeFormatter = DateUtils.MONTH_FORMAT;
                 calendarIterate.add(Calendar.YEAR, -1);
                 calendarIterate.add(Calendar.MONTH, 1);
                 while (calendarIterate.before(calendarNow)) {
@@ -324,7 +311,7 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
         }
 
         for (Points point : pointsFiltered) {
-            totalPoints += point.getPoints();
+            totalPoints += point.getPointsAwarded();
             int previousPoints = 0;
             String key = datetimeFormatter.print(point.getDateTime());
             if (pointsGrouped.containsKey(key)) {
@@ -334,79 +321,31 @@ public class PointsFragment extends AppFragment implements TabLayout.BaseOnTabSe
                 continue;
             }
 
-            int newPoints = previousPoints + point.getPoints();
+            int newPoints = previousPoints + point.getPointsAwarded();
 
             pointsGrouped.put(key, newPoints);
         }
 
     }
 
-    private void initializeDagger() {
-        MobileLearning app = (MobileLearning) getActivity().getApplication();
-        app.getComponent().inject(this);
-    }
-
     private void loadPoints() {
         DbHelper db = DbHelper.getInstance(super.getActivity());
         long userId = db.getUserId(SessionManager.getUsername(super.getActivity()));
         pointsFull = db.getUserPoints(userId, course, false);
-
-//        pointsFull = getMockPoints();
-    }
-
-    // Useful for testing
-    private List<Points> getMockPoints() {
-
-        List<Points> pointsMock = new ArrayList<>();
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.YEAR, -1);
-
-        for (int i = 0; i < 366; i++) {
-
-            Points mockPoint = new Points();
-            mockPoint.setDateTime(MobileLearning.DATETIME_FORMAT.print(calendar.getTimeInMillis()));
-            mockPoint.setPoints(new Random().nextInt(70));
-            mockPoint.setEvent("Event mock " + i);
-            mockPoint.setDescription("Description mock " + i);
-
-            if (i % 13 == 0) {
-                // to add some days with 0 points
-                mockPoint.setPoints(0);
-            }
-
-            pointsMock.add(mockPoint);
-
-            if (i % 7 == 0) {
-                // to add some days with more than one number of points
-                Points mockPointExtra = new Points();
-                mockPointExtra.setDateTime(MobileLearning.DATETIME_FORMAT.print(calendar.getTimeInMillis()));
-                mockPointExtra.setPoints(new Random().nextInt(70));
-                mockPointExtra.setEvent("Event extra " + i);
-                mockPointExtra.setDescription("Description extra " + i);
-                pointsMock.add(mockPointExtra);
-            }
-
-            calendar.add(Calendar.DAY_OF_MONTH, 1);
-        }
-
-        return pointsMock;
     }
 
     @Override
     public void onTabSelected(TabLayout.Tab tab) {
-
         showPointsFiltered(tab.getPosition());
-
     }
 
     @Override
     public void onTabUnselected(TabLayout.Tab tab) {
-
+        // do nothing
     }
 
     @Override
     public void onTabReselected(TabLayout.Tab tab) {
-
+        // do nothing
     }
 }

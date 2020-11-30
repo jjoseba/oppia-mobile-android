@@ -19,15 +19,16 @@ package org.digitalcampus.oppia.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
-public class 	Tag implements Serializable{
+public class Tag implements Serializable{
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 5144400570961137778L;
 	
-	public static final String TAG = Tag.class.getSimpleName();
+	public static final String TAG_CLASS = Tag.class.getSimpleName();
 	private String name;
 	private int count;
 	private int id;
@@ -45,16 +46,20 @@ public class 	Tag implements Serializable{
 		this.name = name;
 	}
 	public int getCount() {
+		// count should not be under 0
+		if (this.count < 0){
+			return 0;
+		}
 		return count;
 	}
 	public void setCount(int count) {
 		this.count = count;
 	}
-	public ArrayList<Course> getCourses() {
+	public List<Course> getCourses() {
 		return courses;
 	}
-	public void setCourses(ArrayList<Course> courses) {
-		this.courses = courses;
+	public void setCourses(List<Course> courses) {
+		this.courses = (ArrayList<Course>) courses;
 	}
 	public int getId() {
 		return id;

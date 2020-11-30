@@ -26,11 +26,12 @@ import org.digitalcampus.mobile.quiz.model.QuizQuestion;
 import org.digitalcampus.mobile.quiz.model.Response;
 
 import android.app.Activity;
-import android.text.Html;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
+
+import androidx.core.text.HtmlCompat;
 
 public class MultiSelectWidget extends QuestionWidget {
 
@@ -41,6 +42,11 @@ public class MultiSelectWidget extends QuestionWidget {
 	public MultiSelectWidget(Activity activity, View v, ViewGroup container, QuizQuestion q) {
 		super(activity, v, container, R.layout.widget_quiz_multiselect);
 		this.question = q;
+	}
+
+	@Override
+	public void setQuestionResponses(List<String> currentAnswers) {
+		// not used for this widget
 	}
 
 	@Override
@@ -55,9 +61,9 @@ public class MultiSelectWidget extends QuestionWidget {
 
     	for (Response r : responses){
     		CheckBox chk= new CheckBox(ctx);
-			chk.setText(Html.fromHtml(r.getTitle(currentUserLang)));
+			chk.setText(HtmlCompat.fromHtml(r.getTitle(currentUserLang), HtmlCompat.FROM_HTML_MODE_LEGACY));
 			LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT);
+					ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
 			setResponseMarginInLayoutParams(params);
 			responsesLL.addView(chk, params);
 			for (String a : currentAnswer) {
@@ -84,6 +90,11 @@ public class MultiSelectWidget extends QuestionWidget {
 		} else {
 			return response;
 		}
+	}
+
+	@Override
+	public List<String> getQuestionResponses() {
+		return new ArrayList<>();
 	}
 
 }

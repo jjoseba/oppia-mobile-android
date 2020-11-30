@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/badges_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:layout_margin="@dimen/list_card_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin">
+
+    <FrameLayout
+        android:layout_width="95dp"
+        android:layout_height="95dp"
+        android:background="@drawable/bg_badge"
+        android:id="@+id/badge_icon"
+        android:layout_marginBottom="@dimen/margin_medium"
+        android:fitsSystemWindows="false">
+
+        <ImageView
+            android:id="@+id/course_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:contentDescription="@string/app_logo_alt"
+            android:padding="18dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/course_icon_placeholder" />
+    </FrameLayout>
+
+
+    <TextView
+        android:id="@+id/badges_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@id/badge_icon"
+        tools:text="2020-02-25" />
+
+    <TextView
+        android:id="@+id/badges_description"
+        style="@style/NormalTextDark"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/badges_date"
+        android:layout_toRightOf="@id/badge_icon"
+        android:gravity="center_horizontal"
+        tools:text="Course completed: Test feedback" />
+
+
+</LinearLayout>

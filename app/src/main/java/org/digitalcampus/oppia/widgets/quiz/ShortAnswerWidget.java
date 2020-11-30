@@ -36,6 +36,10 @@ public class ShortAnswerWidget extends TextInputQuizWidget {
 		super(activity, v, container , R.layout.widget_quiz_shortanswer);
 	}
 
+	@Override
+	public void setQuestionResponses(List<String> currentAnswers) {
+		// not used for this widget
+	}
 
 	@Override
 	public void setQuestionResponses(List<Response> responses, List<String> currentAnswers) {
@@ -45,16 +49,11 @@ public class ShortAnswerWidget extends TextInputQuizWidget {
 		}
         hideOnFocusLoss(et);
 	}
-	
-	public List<String> getQuestionResponses(List<Response> responses){
-		EditText et = view.findViewById(R.id.responsetext);
-		if(et.getText().toString().trim().equals("")){
-			return new ArrayList<>();
-		} else {
-			List<String> response = new ArrayList<>();
-			response.add(et.getText().toString().trim());
-			return response;
-		}
+
+
+	@Override
+	public List<String> getQuestionResponses() {
+		return new ArrayList<>();
 	}
 
 }

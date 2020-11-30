@@ -23,18 +23,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
-import android.widget.AdapterView;
-import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.mikhaellopez.circularprogressbar.CircularProgressBar;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.activity.CourseIndexActivity;
-import org.digitalcampus.oppia.adapter.CourseQuizzesGridAdapter;
-import org.digitalcampus.oppia.application.DbHelper;
-import org.digitalcampus.oppia.application.MobileLearning;
+import org.digitalcampus.oppia.activity.PrefsActivity;
+import org.digitalcampus.oppia.activity.CourseQuizAttemptsActivity;
+import org.digitalcampus.oppia.adapter.CourseQuizzesAdapter;
+import org.digitalcampus.oppia.database.DbHelper;
+import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.CompleteCourse;
@@ -44,15 +43,17 @@ import org.digitalcampus.oppia.task.ParseCourseXMLTask;
 import org.digitalcampus.oppia.utils.ui.ProgressBarAnimator;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
-public class CourseScorecardFragment extends AppFragment implements ParseCourseXMLTask.OnParseXmlListener, AdapterView.OnItemClickListener {
+import androidx.recyclerview.widget.RecyclerView;
+
+public class CourseScorecardFragment extends AppFragment implements ParseCourseXMLTask.OnParseXmlListener {
 
 	private Course course = null;
-    private boolean firstTimeOpened = true;
-    private GridView quizzesGrid;
+    private RecyclerView quizzesGrid;
     private ArrayList<QuizStats> quizStats = new ArrayList<>();
-    private CourseQuizzesGridAdapter quizzesAdapter;
-    ParseCourseXMLTask xmlTask;
+    private CourseQuizzesAdapter quizzesAdapter;
+    private ParseCourseXMLTask xmlTask;
 
     private TextView highlightPretest;
     private TextView highlightAttempted;
@@ -115,33 +116,46 @@ public class CourseScorecardFragment extends AppFragment implements ParseCourseX
         int totalActivities = course.getNoActivities();
         int completedActivities = course.getNoActivitiesCompleted();
         cpbScorecard.setProgressMax(totalActivities);
-        cpbScorecard.setProgressWithAnimation(completedActivities, MobileLearning.SCORECARD_ANIM_DURATION);
+        cpbScorecard.setProgressWithAnimation(completedActivities, App.SCORECARD_ANIM_DURATION);
 
-        firstTimeOpened = false;
-        activitiesTotal.setText(""+course.getNoActivities());
-        activitiesCompleted.setText(""+course.getNoActivitiesCompleted());
+        activitiesTotal.setText(String.valueOf(course.getNoActivities()));
+        activitiesCompleted.setText(String.valueOf(course.getNoActivitiesCompleted()));
 
-        quizzesAdapter = new CourseQuizzesGridAdapter(getActivity(), quizStats);
+        quizzesAdapter = new CourseQuizzesAdapter(getActivity(), quizStats);
         quizzesGrid.setAdapter(quizzesAdapter);
-        quizzesGrid.setOnItemClickListener(this);
+        quizzesGrid.setNestedScrollingEnabled(false);
+        quizzesAdapter.setOnItemClickListener((v, position)->{
+            QuizStats quiz = quizzesAdapter.getItemAtPosition(position);
+            Intent i = new Intent(getActivity(), CourseQuizAttemptsActivity.class);
+            Bundle tb = new Bundle();
+            tb.putSerializable(QuizStats.TAG, quiz);
+            i.putExtras(tb);
+            startActivityForResult(i, 1);
+        });
 	}
 
-    //@Override
-    public void onParseComplete(CompleteCourse parsed) {
+    @Override
+    public void onParseComplete(CompleteCourse parsedCourse) {
 
-        ArrayList<Activity> baseline = parsed.getBaselineActivities();
+        ArrayList<Activity> baseline = (ArrayList<Activity>) parsedCourse.getBaselineActivities();
         
     	DbHelper db = DbHelper.getInstance(super.getActivity());
         long userId = db.getUserId(SessionManager.getUsername(getActivity()));
-        ArrayList<Activity> quizActs = db.getCourseQuizzes(course.getCourseId());
+        ArrayList<Activity> quizActs = (ArrayList<Activity>) db.getCourseQuizzes(course.getCourseId());
         ArrayList<QuizStats> quizzes = new ArrayList<>();
+
+        String prefLang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+
         for (Activity a: quizActs){
         	// get the max score for the quiz for the user
         	QuizStats qs = db.getQuizAttempt(a.getDigest(), userId);
+        	qs.setQuizTitle(a.getTitle(prefLang));
+        	qs.setSectionTitle(parsedCourse.getSectionByActivityDigest(a.getDigest()).getTitle(prefLang));
         	quizzes.add(qs);
         }
 
-        int quizzesAttempted = 0, quizzesPassed = 0;
+        int quizzesAttempted = 0;
+        int quizzesPassed = 0;
 
         for (QuizStats qs: quizzes){
         	if (qs.isAttempted()){
@@ -167,8 +181,8 @@ public class CourseScorecardFragment extends AppFragment implements ParseCourseX
         }
         
         highlightPretest.setText(pretestScore >= 0 ? (pretestScore + "%") : "-");
-        highlightAttempted.setText("" + quizzesAttempted);
-        highlightPassed.setText("" + quizzesPassed);
+        highlightAttempted.setText(String.valueOf(quizzesAttempted));
+        highlightPassed.setText(String.valueOf(quizzesPassed));
         quizzesAdapter.notifyDataSetChanged();
 
         loadingSpinner.setVisibility(View.GONE);
@@ -196,17 +210,9 @@ public class CourseScorecardFragment extends AppFragment implements ParseCourseX
         }
     }
 
-    //@Override
+    @Override
     public void onParseError() {
         // no need to do anything
     }
 
-    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-        QuizStats quiz = quizzesAdapter.getItem(i);
-
-        Intent returnIntent = new Intent();
-        returnIntent.putExtra(CourseIndexActivity.JUMPTO_TAG, quiz.getDigest());
-        getActivity().setResult(CourseIndexActivity.RESULT_JUMPTO, returnIntent);
-        getActivity().finish();
-    }
 }

@@ -13,8 +13,6 @@
     <string name="menu_language">Choisir la langue</string>
     <string name="menu_settings">Paramètres</string>
     <string name="menu_about">À propos</string>
-    <string name="menu_font_increase">Agrandir la taille du texte</string>
-    <string name="menu_font_decrease">Réduire la taille du texte</string>
     <string name="menu_help">Aide</string>
     <string name="menu_logout">Déconnection</string>
     <string name="menu_read_aloud">Lire à voix haute</string>
@@ -32,7 +30,6 @@
     <string name="fragment_welcome_title">Bienvenue sur &appName;</string>
     <string name="fragment_welcome_desc">&appName; est une application d\'enseignement Androïd pour mobiles et tablettes qui permet le téléchargement des cours de la plateforme &appName;. Les utilisateurs peuvent travailler en mode hors-ligne notamment dans les tests.\n\n\'Oppia\' veut dire \'apprendre\' en finlandais.</string>
     <string name="fragment_welcome_login_info">Pour débuter sur &appName;, vous devez vous inscrire ou vous connecter.</string>
-    <string name="fragment_welcome_privacy">Nous respectons votre droit à la vie privée et à la sécurité de vos données personnelles, <a href="http://digital-campus.org/privacy/">en savoir plus sur la politique de confidentialité de &appName;</a></string>
 
     <string name="tab_title_about">À propos</string>
     <string name="tab_title_badges">Badges</string>
@@ -53,8 +50,6 @@
     <string name="title_activity_course_index">Catalogue des cours</string>
     <string name="title_activity_course">Activité</string>
     <string name="title_course_meta">À propos</string>
-    <string name="title_stats_submitted">Pas d\'activités envoyées au serveur</string>
-    <string name="title_stats_unsubmitted">Pas d\'activités en attente</string>
     <string name="title_prefs">Paramètres</string>
     <string name="title_scorecard">Carnet</string>
     <string name="title_tag_select_activity">Choisir une catégorie</string>
@@ -97,15 +92,11 @@
     <string name="prefBackgroudDataConnect_summary">Envoyer le journal d\'activités même lorsque l\'application est en mode de veille</string>
     <string name="prefLanguage">Langue préférée</string>
     <string name="prefHighlightCompleted">Mettre en surbrillance les activités terminées</string>
-    <string name="prefNoScheduleReminders">Number of suggested activities</string>
-    <string name="prefNoScheduleReminders_summary">Nombre d\'activités proposées à afficher</string>
     <string name="prefServer">Serveur</string>
     <string name="prefServerTimeoutConnection">Délai de connexion</string>
     <string name="prefServerTimeoutResponse">Délai de réponse</string>
     <string name="prefShowCourseDescription">Afficher la description des cours</string>
     <string name="prefShowProgressBar">Afficher la barre de progression</string>
-    <string name="prefShowScheduleReminders">Afficher les activités suggérées</string>
-    <string name="prefShowScheduleReminders_summary">Afficher les activités qui doivent être complétées par la suite</string>
     <string name="prefShowSectionNumbers">Afficher les numéros des sections</string>
     <string name="prefTextSize">Taille du texte</string>
     <string name="prefUser">Nom d\'utilisateur</string>
@@ -174,7 +165,6 @@
 
     <string name="publisher">Éditeur :</string>
     <string name="update">Mise à jour</string>
-    <string name="update_schedule">Calendrier de mise à jour</string>
     <string name="installed">Installé</string>
     <string name="install">Installation en cours</string>
 
@@ -182,9 +172,7 @@
     <string name="downloading">Téléchargement en cours &#8230;</string>
     <string name="download_complete">Téléchargement terminé</string>
 
-    <string name="update_starting">Obtenir des mises à jour régulières</string>
     <string name="updating">Mise à jour en cours &#8230;</string>
-    <string name="update_complete">Mise à jour terminée</string>
 
     <string name="installing_course">Installation de :  %1$s</string>
     <string name="install_complete">Installation terminée</string>
@@ -211,7 +199,6 @@
     <string name="info_no_badges">Vous n\'avez pas encore de badges. Terminez votre premier cours pour obtenir votre premier badge.</string>
 
     <string name="scan_media_download_button">Télécharger</string>
-    <string name="scan_media_download_via_pc_button">Télécharger à partir d\'un PC</string>
     <string name="success_media_download">Fichier média : \'%1$s\' téléchargé avec succès.</string>
     <string name="media_file_size">%1$.1fMb</string>
     <string name="missing_media_download_selected">Télécharger la sélection</string>
@@ -270,13 +257,6 @@
     <string name="reset_complete">Votre mot de passe a bien été réinitialisé.\n\nVeuillez consulter votre email pour obtenir votre nouveau mot de passe.</string>
 
     <string name="change_language">Changer la langue</string>
-
-    <string name="download_via_pc_message">Le fichier  \'%1$s\' est à présent sur la carte SD de votre appareil, ouvrez-le sur votre ordinateur et suivez les instructions pour télécharger les fichiers média et les copier sur la carte SD de votre appareil.</string>
-    <string name="download_via_pc_title">Téléchargement des fichiers média</string>
-    <string name="download_via_pc_intro">Téléchargez tous les fichiers ci-dessous sur votre ordinateur (utiliser le bouton droit de la souris et choisissez enregistrer-sous)</string>
-    <string name="download_via_pc_final">Une fois que vous aurez téléchargé les fichiers, copiez-les sur le repertoire \'%1$s\' de la carte SD de votre appareil.</string>
-
-    <string name="schedule_reminders">Prochaines activité proposées :</string>
 
     <string name="course_draft">(Brouillon)</string>
 

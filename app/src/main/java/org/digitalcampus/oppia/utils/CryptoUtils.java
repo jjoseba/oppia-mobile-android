@@ -7,7 +7,7 @@ import com.splunk.mint.Mint;
 
 import org.jarjar.apache.commons.codec.digest.DigestUtils;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -22,17 +22,14 @@ public class CryptoUtils {
 
     );
 
+    private CryptoUtils() {
+        throw new IllegalStateException("Utility class");
+    }
+
     private static String encryptWithAlgorithm(String password, Pair<String, String> algorithm) throws NoSuchAlgorithmException {
         final MessageDigest digest = MessageDigest.getInstance(algorithm.second);
-        byte[] result, passBytes;
-        try {
-            passBytes = password.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            Mint.logException(e);
-            Log.d(TAG, "UnsupportedEncodingException:", e);
-            passBytes = password.getBytes();
-        }
-        result = digest.digest(passBytes);
+        byte[] result;
+        result = digest.digest(password.getBytes(StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
         for (byte b : result){
             sb.append(String.format("%02x", b));
@@ -61,31 +58,4 @@ public class CryptoUtils {
         return hashed;
 
     }
-
-     /*
-    //Needs SpongyCastle in gradle
-
-    private static final int SEED_BYTES = 15;
-    private static final int ITERATION_COUNT = 4096;
-
-    public static String encryptDjangoPassword(String password){
-        String hashed = "";
-        SecureRandom rng = new SecureRandom();
-        byte[] salt = rng.generateSeed(SEED_BYTES);
-        // Django passwords follow this format: <algorithm>$<iterations>$<salt>$<hash>
-
-        PKCS5S2ParametersGenerator gen = new PKCS5S2ParametersGenerator(new SHA256Digest());
-
-        gen.init(password.getBytes(), salt, ITERATION_COUNT);
-        KeyParameter dk = (KeyParameter) gen.generateDerivedParameters(256);
-        byte[] encoded = dk.getKey();
-        String formatted = String.format("%s$%d$%s$%s",
-                "pbkdf2_sha256", //Algorithm
-                ITERATION_COUNT, //iterations
-                Hex.encodeHex(salt), //salt
-                Hex.encodeHex(encoded)); //hash
-
-        return hashed;
-    }
-    */
 }

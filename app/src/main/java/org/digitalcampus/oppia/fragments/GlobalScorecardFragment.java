@@ -24,14 +24,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 
-import androidx.recyclerview.widget.RecyclerView;
-
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.CourseIndexActivity;
 import org.digitalcampus.oppia.activity.TagSelectActivity;
 import org.digitalcampus.oppia.adapter.ScorecardsGridAdapter;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
-import org.digitalcampus.oppia.application.MobileLearning;
 import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.CoursesRepository;
 
@@ -39,6 +36,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 public class GlobalScorecardFragment extends AppFragment implements ScorecardsGridAdapter.OnItemClickListener {
 
@@ -57,10 +56,6 @@ public class GlobalScorecardFragment extends AppFragment implements ScorecardsGr
         // Required empty public constructor
     }
 
-    private void initializeDagger() {
-        MobileLearning app = (MobileLearning) getActivity().getApplication();
-        app.getComponent().inject(this);
-    }
 
     private void findViews(View layout) {
         recyclerScorecards = layout.findViewById(R.id.recycler_scorecards);
@@ -71,6 +66,7 @@ public class GlobalScorecardFragment extends AppFragment implements ScorecardsGr
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View layout = inflater.inflate(R.layout.fragment_global_scorecard, container, false);
         findViews(layout);
+        getAppComponent().inject(this);
 
         adapterScorecards = new ScorecardsGridAdapter(getActivity(), courses);
         adapterScorecards.setOnItemClickListener(this);
@@ -78,15 +74,6 @@ public class GlobalScorecardFragment extends AppFragment implements ScorecardsGr
 
         return layout;
     }
-
-
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        initializeDagger();
-
-    }
-
 
     @Override
     public void onResume() {
@@ -108,16 +95,9 @@ public class GlobalScorecardFragment extends AppFragment implements ScorecardsGr
             emptyState.setVisibility(View.VISIBLE);
 
             Button download = emptyState.findViewById(R.id.btn_download_courses);
-            download.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    AdminSecurityManager.checkAdminPermission(getActivity(), R.id.menu_download, new AdminSecurityManager.AuthListener() {
-                        public void onPermissionGranted() {
-                            startActivity(new Intent(getActivity(), TagSelectActivity.class));
-                        }
-                    });
-                }
-            });
+            download.setOnClickListener(v ->
+                    AdminSecurityManager.with(getActivity()).checkAdminPermission(R.id.menu_download, () ->
+                            startActivity(new Intent(getActivity(), TagSelectActivity.class))));
         } else {
             recyclerScorecards.setVisibility(View.VISIBLE);
             emptyState.setVisibility(View.GONE);

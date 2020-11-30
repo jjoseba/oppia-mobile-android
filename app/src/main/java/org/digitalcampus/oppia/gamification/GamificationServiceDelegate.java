@@ -2,12 +2,10 @@ package org.digitalcampus.oppia.gamification;
 
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 import org.digitalcampus.mobile.quiz.Quiz;
 import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.Course;
-import org.digitalcampus.oppia.widgets.PageWidget;
 
 public class GamificationServiceDelegate {
 
@@ -81,10 +79,11 @@ public class GamificationServiceDelegate {
         serviceIntent = null;
     }
 
-    public void registerFeedbackEvent(long timetaken, int quizId, String instanceId) {
+    public void registerFeedbackEvent(long timetaken, Quiz feedback, int quizId, String instanceId) {
 
         if (serviceIntent == null) return;
 
+        serviceIntent.putExtra(GamificationService.SERVICE_QUIZ, feedback);
         serviceIntent.putExtra(GamificationService.SERVICE_EVENT, GamificationService.SERVICE_EVENT_FEEDBACK);
         serviceIntent.putExtra(GamificationService.EVENTDATA_TIMETAKEN, timetaken);
         serviceIntent.putExtra(GamificationService.EVENTDATA_QUIZID, quizId);
