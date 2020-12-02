@@ -53,7 +53,7 @@ public class VideoUITest extends CourseMediaBaseTest {
         return videoActivityIntent;
     }
 
-    /*@Test
+    @Test
     public void checkVideoNotCompleted() throws InterruptedException {
 
         Intent videoActivityIntent = getTestVideoActivityIntent();
@@ -68,7 +68,7 @@ public class VideoUITest extends CourseMediaBaseTest {
 
         }
 
-    }*/
+    }
 
     @Test
     public void checkVideoCompleted() throws InterruptedException {
