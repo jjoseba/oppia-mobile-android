@@ -54,5 +54,5 @@ jobs:
           api-level: 29
           profile: pixel
           target: google_apis
-          sdcard-path-or-size: 256M
-          script: ./gradlew connectedNormalDebugAndroidTest --debug
+          sdcard-path-or-size: 128M
+          script: ./gradlew connectedNormalDebugAndroidTest
