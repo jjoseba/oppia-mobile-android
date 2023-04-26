@@ -31,25 +31,25 @@ public class DownloadBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        if (!intent.hasExtra(DownloadService.SERVICE_URL) || !intent.hasExtra(DownloadService.SERVICE_ACTION)){
+        if (!intent.hasExtra(FileIntentService.SERVICE_URL) || !intent.hasExtra(FileIntentService.SERVICE_ACTION)){
             //If the file URL and the action are not present, we can't identify it
             return;
         }
 
-        String fileUrl = intent.getStringExtra(DownloadService.SERVICE_URL);
-        String action = intent.getStringExtra(DownloadService.SERVICE_ACTION);
+        String fileUrl = intent.getStringExtra(FileIntentService.SERVICE_URL);
+        String action = intent.getStringExtra(FileIntentService.SERVICE_ACTION);
 
         if(mediaListener != null){
             switch (action) {
-                case DownloadService.ACTION_COMPLETE:
+                case FileIntentService.ACTION_COMPLETE:
                     mediaListener.onDownloadComplete(fileUrl);
                     break;
-                case DownloadService.ACTION_FAILED:
-                    String message = intent.getStringExtra(DownloadService.SERVICE_MESSAGE);
+                case FileIntentService.ACTION_FAILED:
+                    String message = intent.getStringExtra(FileIntentService.SERVICE_MESSAGE);
                     mediaListener.onDownloadFailed(fileUrl, message);
                     break;
-                case DownloadService.ACTION_DOWNLOAD:
-                    int progress = Integer.parseInt(intent.getStringExtra(DownloadService.SERVICE_MESSAGE));
+                case FileIntentService.ACTION_DOWNLOAD:
+                    int progress = Integer.parseInt(intent.getStringExtra(FileIntentService.SERVICE_MESSAGE));
                     mediaListener.onDownloadProgress(fileUrl, progress);
                     break;
                 default:

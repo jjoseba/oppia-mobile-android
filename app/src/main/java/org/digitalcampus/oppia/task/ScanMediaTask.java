@@ -91,25 +91,6 @@ public class ScanMediaTask extends AsyncTask<List<Course>, String, EntityListRes
     }
 
     @Override
-    protected void onPreExecute() {
-        synchronized (this) {
-            if (mStateListener != null) {
-                mStateListener.scanStart();
-            }
-        }
-    }
-
-    @Override
-    protected void onProgressUpdate(String... progress) {
-        synchronized (this) {
-            if (mStateListener != null) {
-                // update progress
-                mStateListener.scanProgressUpdate(progress[0]);
-            }
-        }
-    }
-
-    @Override
     protected void onPostExecute(EntityListResult<Media> result) {
         synchronized (this) {
             if (mStateListener != null) {

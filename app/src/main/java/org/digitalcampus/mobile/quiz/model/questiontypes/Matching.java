@@ -129,6 +129,7 @@ public class Matching extends QuizQuestion implements Serializable {
         return true;
     }
 
+    @Override
     public void updateUserResponsesLang(String previousLang, String newLang){
 
         List<Pair<String, String>> selectors = new ArrayList<>();
@@ -147,7 +148,8 @@ public class Matching extends QuizQuestion implements Serializable {
             String[] response = userResponse.split(Quiz.MATCHING_REGEX, -1);
             String prevLangSelector = response[0];
             String prevLangAnswer = response[1];
-            String newLangSelector = null, newLangAnswer = null;
+            String newLangSelector = null;
+            String newLangAnswer = null;
             for (Pair<String, String> selector : selectors){
                 if (selector.first.equals(prevLangSelector)){
                     newLangSelector = selector.second;

@@ -89,8 +89,8 @@ public class StorageUtils {
         try (InputStream is = ctx.getResources().getAssets().open(filename)) {
             int size = is.available();
             byte[] buffer = new byte[size];
-            is.read(buffer);
-            return new String(buffer, StandardCharsets.UTF_8);
+            int readSize = is.read(buffer);
+            return (readSize > 0) ? new String(buffer, StandardCharsets.UTF_8) : null;
         } catch (IOException e) {
             Analytics.logException(e);
             return null;

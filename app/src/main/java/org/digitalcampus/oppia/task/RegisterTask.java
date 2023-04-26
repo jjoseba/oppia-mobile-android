@@ -108,11 +108,11 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
             json.put("username", u.getUsername());
             json.put("password", u.getPassword());
             json.put("passwordagain", u.getPasswordAgain());
-            json.put(User.EMAIL, u.getEmail());
-            json.put(User.FIRST_NAME, u.getFirstname());
-            json.put(User.LAST_NAME, u.getLastname());
+            json.put(User.FIELD_EMAIL, u.getEmail());
+            json.put(User.FIELD_FIRST_NAME, u.getFirstname());
+            json.put(User.FIELD_LAST_NAME, u.getLastname());
             json.put("jobtitle", u.getJobTitle());
-            json.put(User.ORGANISATION, u.getOrganisation());
+            json.put(User.FIELD_ORGANISATION, u.getOrganisation());
             json.put("phoneno", u.getPhoneNo());
 
             List<CustomField> cFields = DbHelper.getInstance(ctx).getCustomFields();
@@ -133,13 +133,13 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
             Response response = client.newCall(request).execute();
             if (response.isSuccessful()) {
                 JSONObject jsonResp = new JSONObject(response.body().string());
-                u.setApiKey(jsonResp.getString(User.API_KEY));
+                u.setApiKey(jsonResp.getString(User.FIELD_API_KEY));
                 u.setOfflineRegister(false);
                 u.setBadges(getBadges(jsonResp));
                 u.setScoringEnabled(getScoringEnabled(jsonResp));
                 u.setBadgingEnabled(getBadgingEnabled(jsonResp));
-                u.setFirstname(jsonResp.getString(User.FIRST_NAME));
-                u.setLastname(jsonResp.getString(User.LAST_NAME));
+                u.setFirstname(jsonResp.getString(User.FIELD_FIRST_NAME));
+                u.setLastname(jsonResp.getString(User.FIELD_LAST_NAME));
                 new MetaDataUtils(ctx).saveMetaData(jsonResp);
                 return true;
             } else if (response.code() == 400) {
@@ -174,7 +174,7 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
     private int getBadges(JSONObject jsonResp) {
         try {
-            return jsonResp.getInt(User.BADGES);
+            return jsonResp.getInt(User.FIELD_BADGES);
         } catch (JSONException e) {
             return 0;
         }
@@ -182,7 +182,7 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
     private boolean getScoringEnabled(JSONObject jsonResp) {
         try {
-            return jsonResp.getBoolean(User.SCORING_ENABLED);
+            return jsonResp.getBoolean(User.FIELD_SCORING_ENABLED);
         } catch (JSONException e) {
             return true;
         }
@@ -190,7 +190,7 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
     private boolean getBadgingEnabled(JSONObject jsonResp) {
         try {
-            return jsonResp.getBoolean(User.BADGING_ENABLED);
+            return jsonResp.getBoolean(User.FIELD_BADGING_ENABLED);
         } catch (JSONException e) {
             return true;
         }

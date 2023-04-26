@@ -32,17 +32,17 @@ import java.util.Map;
 
 public class User {
 
-	public static final String API_KEY = "api_key";
-	public static final String FIRST_NAME = "first_name";
-	public static final String LAST_NAME = "last_name";
-	public static final String EMAIL = "email";
-	public static final String ORGANISATION = "organisation";
-	public static final String JOB_TITLE = "job_title";
-	public static final String SCORING_ENABLED = "scoring";
-	public static final String BADGING_ENABLED = "badging";
-	public static final String POINTS = "points";
-	public static final String BADGES = "badges";
-	public static final String COHORTS = "cohorts";
+	public static final String FIELD_API_KEY = "api_key";
+	public static final String FIELD_FIRST_NAME = "first_name";
+	public static final String FIELD_LAST_NAME = "last_name";
+	public static final String FIELD_EMAIL = "email";
+	public static final String FIELD_ORGANISATION = "organisation";
+	public static final String FIELD_JOB_TITLE = "job_title";
+	public static final String FIELD_SCORING_ENABLED = "scoring";
+	public static final String FIELD_BADGING_ENABLED = "badging";
+	public static final String FIELD_POINTS = "points";
+	public static final String FIELD_BADGES = "badges";
+	public static final String FIELD_COHORTS = "cohorts";
 
 	private long userId;
 	private String username;
@@ -243,34 +243,34 @@ public class User {
 
 	public void updateFromJSON(Context ctx, JSONObject json) throws JSONException {
 
-		this.setFirstname(json.getString(User.FIRST_NAME));
-		this.setLastname(json.getString(User.LAST_NAME));
-		if (json.has(User.API_KEY)){
-			this.setApiKey(json.getString(User.API_KEY));
+		this.setFirstname(json.getString(User.FIELD_FIRST_NAME));
+		this.setLastname(json.getString(User.FIELD_LAST_NAME));
+		if (json.has(User.FIELD_API_KEY)){
+			this.setApiKey(json.getString(User.FIELD_API_KEY));
 		}
-		if (json.has(User.EMAIL)) {
-			this.setEmail(json.getString(User.EMAIL));
+		if (json.has(User.FIELD_EMAIL)) {
+			this.setEmail(json.getString(User.FIELD_EMAIL));
 		}
-		if (json.has(User.ORGANISATION)) {
-			this.setOrganisation(json.getString(User.ORGANISATION));
+		if (json.has(User.FIELD_ORGANISATION)) {
+			this.setOrganisation(json.getString(User.FIELD_ORGANISATION));
 		}
-		if (json.has(User.JOB_TITLE)) {
-			this.setJobTitle(json.getString(User.JOB_TITLE));
+		if (json.has(User.FIELD_JOB_TITLE)) {
+			this.setJobTitle(json.getString(User.FIELD_JOB_TITLE));
 		}
 		this.setCustomFieldsFromJSON(ctx, json);
 
 		// Set user cohorts
-		if (json.has(User.COHORTS)) {
-			JSONArray cohortsJson = json.getJSONArray(User.COHORTS);
+		if (json.has(User.FIELD_COHORTS)) {
+			JSONArray cohortsJson = json.getJSONArray(User.FIELD_COHORTS);
 			this.setCohortsFromJSONArray(cohortsJson);
 		}
 
 		// Set badging and scoring data
 		try {
-			this.setPoints(json.getInt(User.POINTS));
-			this.setBadges(json.getInt(User.BADGES));
-			this.setScoringEnabled(json.getBoolean(User.BADGING_ENABLED));
-			this.setBadgingEnabled(json.getBoolean(User.BADGING_ENABLED));
+			this.setPoints(json.getInt(User.FIELD_POINTS));
+			this.setBadges(json.getInt(User.FIELD_BADGES));
+			this.setScoringEnabled(json.getBoolean(User.FIELD_BADGING_ENABLED));
+			this.setBadgingEnabled(json.getBoolean(User.FIELD_BADGING_ENABLED));
 		} catch (JSONException e) {
 			this.setPoints(0);
 			this.setBadges(0);

@@ -21,9 +21,6 @@ import org.digitalcampus.oppia.model.Media;
 import org.digitalcampus.oppia.task.result.EntityListResult;
 
 public interface ScanMediaListener {
-	
-	void scanStart();
-    void scanProgressUpdate(String msg);
     void scanComplete(EntityListResult<Media> result);
 
 }

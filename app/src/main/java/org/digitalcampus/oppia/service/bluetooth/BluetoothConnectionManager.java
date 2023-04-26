@@ -44,7 +44,7 @@ public class BluetoothConnectionManager {
 
 
     private static int state;
-    private static String deviceName;
+    private static String deviceName = null;
 
     // Member fields
     private final BluetoothAdapter mAdapter;
@@ -68,7 +68,6 @@ public class BluetoothConnectionManager {
 
         if (state != STATE_CONNECTED){
             state = STATE_NONE;
-            deviceName = null;
             newState = state;
         }
     }

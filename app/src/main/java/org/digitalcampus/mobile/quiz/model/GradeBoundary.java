@@ -19,10 +19,5 @@ public class GradeBoundary {
         return message;
     }
 
-    public static Comparator<GradeBoundary> sorByGradeDescending = new Comparator<GradeBoundary>() {
-        @Override
-        public int compare(GradeBoundary gradeBoundary1, GradeBoundary gradeBoundary2) {
-            return gradeBoundary2.grade - gradeBoundary1.grade;
-        }
-    };
+    public static final Comparator<GradeBoundary> sortByGradeDescending = (gradeBoundary1, gradeBoundary2) -> gradeBoundary2.grade - gradeBoundary1.grade;
 }

@@ -168,6 +168,10 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String TRACKER_LOG_C_EXPORTED = "exported";
     private static final String TRACKER_LOG_C_EVENT = "event";
     private static final String TRACKER_LOG_C_POINTS = "points";
+    private static final String TRACKER_LOG_JSON_COURSE = "course";
+    private static final String TRACKER_LOG_JSON_COURSEVERSION = "course_version";
+    private static final String TRACKER_LOG_JSON_DATA = "data";
+    private static final String TRACKER_LOG_JSON_DATE = "tracker_date";
 
     private static final String QUIZATTEMPTS_TABLE = "results";
     private static final String QUIZATTEMPTS_C_ID = BaseColumns._ID;
@@ -1956,8 +1960,8 @@ public class DbHelper extends SQLiteOpenHelper {
             String content = "";
             try {
                 JSONObject json = new JSONObject();
-                json.put("data", c.getString(c.getColumnIndex(TRACKER_LOG_C_DATA)));
-                json.put("tracker_date", c.getString(c.getColumnIndex(TRACKER_LOG_C_DATETIME)));
+                json.put(TRACKER_LOG_JSON_DATA, c.getString(c.getColumnIndex(TRACKER_LOG_C_DATA)));
+                json.put(TRACKER_LOG_JSON_DATE, c.getString(c.getColumnIndex(TRACKER_LOG_C_DATETIME)));
                 json.put(TRACKER_LOG_C_COMPLETED, c.getInt(c.getColumnIndex(TRACKER_LOG_C_COMPLETED)));
                 json.put(TRACKER_LOG_C_ACTIVITYDIGEST, (digest != null) ? digest : "");
                 json.put(TRACKER_LOG_C_EVENT, c.getString(c.getColumnIndex(TRACKER_LOG_C_EVENT)));
@@ -1965,13 +1969,13 @@ public class DbHelper extends SQLiteOpenHelper {
 
                 Course m = this.getCourseWithProgress(c.getLong(c.getColumnIndex(TRACKER_LOG_C_COURSEID)), userId);
                 if (m != null) {
-                    json.put(MEDIA_COURSE, m.getShortname());
-                    json.put("course_version", m.getVersionId());
+                    json.put(TRACKER_LOG_JSON_COURSE, m.getShortname());
+                    json.put(TRACKER_LOG_JSON_COURSEVERSION, m.getVersionId());
                 }
 
                 String trackerType = c.getString(c.getColumnIndex(TRACKER_LOG_C_TYPE));
                 if (trackerType != null) {
-                    json.put("type", trackerType);
+                    json.put(TRACKER_LOG_C_TYPE, trackerType);
                 }
                 content = json.toString();
             } catch (JSONException jsone) {
@@ -2018,20 +2022,20 @@ public class DbHelper extends SQLiteOpenHelper {
             String content = "";
             try {
                 JSONObject json = new JSONObject();
-                json.put("data", c.getString(c.getColumnIndex(TRACKER_LOG_C_DATA)));
-                json.put("tracker_date", c.getString(c.getColumnIndex(TRACKER_LOG_C_DATETIME)));
+                json.put(TRACKER_LOG_JSON_DATA, c.getString(c.getColumnIndex(TRACKER_LOG_C_DATA)));
+                json.put(TRACKER_LOG_JSON_DATE, c.getString(c.getColumnIndex(TRACKER_LOG_C_DATETIME)));
                 json.put(TRACKER_LOG_C_COMPLETED, c.getInt(c.getColumnIndex(TRACKER_LOG_C_COMPLETED)));
                 json.put(TRACKER_LOG_C_ACTIVITYDIGEST, (digest != null) ? digest : "");
                 json.put(TRACKER_LOG_C_EVENT, c.getString(c.getColumnIndex(TRACKER_LOG_C_EVENT)));
                 json.put(TRACKER_LOG_C_POINTS, c.getInt(c.getColumnIndex(TRACKER_LOG_C_POINTS)));
                 Course m = this.getCourseWithProgress(c.getLong(c.getColumnIndex(TRACKER_LOG_C_COURSEID)), userId);
                 if (m != null) {
-                    json.put("course", m.getShortname());
-                    json.put("course_version", m.getVersionId());
+                    json.put(TRACKER_LOG_JSON_COURSE, m.getShortname());
+                    json.put(TRACKER_LOG_JSON_COURSEVERSION, m.getVersionId());
                 }
                 String trackerType = c.getString(c.getColumnIndex(TRACKER_LOG_C_TYPE));
                 if (trackerType != null) {
-                    json.put("type", trackerType);
+                    json.put(TRACKER_LOG_C_TYPE, trackerType);
                 }
                 content = json.toString();
             } catch (JSONException jsone) {

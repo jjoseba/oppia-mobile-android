@@ -19,7 +19,6 @@
 
 package org.digitalcampus.oppia.utils.mediaplayer;
 
-import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -63,20 +62,18 @@ public class VideoPlayerActivity extends AppActivity implements SurfaceHolder.Ca
 
     private boolean videoEndReached = false;
 
-    protected SharedPreferences prefs;
     private ActivityVideoPlayerBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         // Prevent activity from going to sleep
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         binding = ActivityVideoPlayerBinding.inflate(LayoutInflater.from(this));
         setContentView(binding.getRoot());
 
-        prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        getAppComponent().inject(this);
         player = new MediaPlayer();
 
         controller = new VideoControllerView(this);

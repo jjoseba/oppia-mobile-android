@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import org.digitalcampus.oppia.listener.CourseInstallerListener;
+import org.digitalcampus.oppia.service.FileIntentService;
 
 public class InstallerBroadcastReceiver extends BroadcastReceiver {
 
@@ -30,29 +31,29 @@ public class InstallerBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        if (!intent.hasExtra(CourseInstallerService.SERVICE_URL) || !intent.hasExtra(CourseInstallerService.SERVICE_ACTION)){
+        if (!intent.hasExtra(FileIntentService.SERVICE_URL) || !intent.hasExtra(FileIntentService.SERVICE_ACTION)){
             //If the file URL and the action are not present, we can't identify it
             return;
         }
 
-        String fileUrl = intent.getStringExtra(CourseInstallerService.SERVICE_URL);
-        String action = intent.getStringExtra(CourseInstallerService.SERVICE_ACTION);
+        String fileUrl = intent.getStringExtra(FileIntentService.SERVICE_URL);
+        String action = intent.getStringExtra(FileIntentService.SERVICE_ACTION);
 
         if(cListener != null){
             switch (action) {
-                case CourseInstallerService.ACTION_COMPLETE:
+                case FileIntentService.ACTION_COMPLETE:
                     cListener.onInstallComplete(fileUrl);
                     break;
-                case CourseInstallerService.ACTION_FAILED:
-                    String message = intent.getStringExtra(CourseInstallerService.SERVICE_MESSAGE);
+                case FileIntentService.ACTION_FAILED:
+                    String message = intent.getStringExtra(FileIntentService.SERVICE_MESSAGE);
                     cListener.onInstallFailed(fileUrl, message);
                     break;
-                case CourseInstallerService.ACTION_DOWNLOAD:
+                case FileIntentService.ACTION_DOWNLOAD:
                     int progressDownload = Integer.parseInt(intent.getStringExtra(CourseInstallerService.SERVICE_MESSAGE));
                     cListener.onDownloadProgress(fileUrl, progressDownload);
                     break;
                 case CourseInstallerService.ACTION_INSTALL:
-                    int progressInstall = Integer.parseInt(intent.getStringExtra(CourseInstallerService.SERVICE_MESSAGE));
+                    int progressInstall = Integer.parseInt(intent.getStringExtra(FileIntentService.SERVICE_MESSAGE));
                     cListener.onInstallProgress(fileUrl, progressInstall);
                     break;
                 default:

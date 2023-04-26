@@ -35,7 +35,6 @@ import androidx.preference.PreferenceManager;
 
 public class AboutFragment extends AppFragment {
 
-	private SharedPreferences prefs;
 	private FragmentAboutBinding binding;
 
 	public static AboutFragment newInstance() {
@@ -48,7 +47,6 @@ public class AboutFragment extends AppFragment {
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		prefs = PreferenceManager.getDefaultSharedPreferences(super.getActivity());
 		binding = FragmentAboutBinding.inflate(inflater, container, false);
 		return binding.getRoot();
 	}
@@ -56,6 +54,7 @@ public class AboutFragment extends AppFragment {
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
+		getAppComponent().inject(this);
 		
 		prefs = PreferenceManager.getDefaultSharedPreferences(super.getActivity());
 		String lang = prefs.getString(PrefsActivity.PREF_INTERFACE_LANGUAGE, Locale.getDefault().getLanguage());

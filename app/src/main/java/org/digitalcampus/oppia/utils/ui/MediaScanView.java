@@ -121,13 +121,7 @@ public class MediaScanView extends FrameLayout implements ScanMediaListener {
 
     /* ScanMediaListener implementation */
 
-    // View is not showing until scanComplete() so the messages have been removed
-    public void scanStart() {
-    }
-
-    public void scanProgressUpdate(String msg) {
-    }
-
+    @Override
     public void scanComplete(EntityListResult<Media> result) {
 
         if (result.hasItems()) {

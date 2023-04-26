@@ -453,16 +453,7 @@ public class DownloadMediaActivity extends AppActivity implements DownloadMediaL
     }
 
 
-    // MISSING MEDIA SCAN
-    @Override
-    public void scanStart() {
-    }
-
-    @Override
-    public void scanProgressUpdate(String msg) {
-
-    }
-
+    /* ScanMediaListener implementation */
     @Override
     public void scanComplete(EntityListResult<Media> result) {
 

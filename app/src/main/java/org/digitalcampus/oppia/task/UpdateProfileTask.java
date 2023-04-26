@@ -96,11 +96,11 @@ public class UpdateProfileTask extends APIRequestTask<User, String, EntityResult
 
             // add post params
             JSONObject json = new JSONObject();
-            json.put(User.EMAIL, u.getEmail());
-            json.put(User.FIRST_NAME, u.getFirstname());
-            json.put(User.LAST_NAME, u.getLastname());
-            json.put(User.JOB_TITLE, u.getJobTitle());
-            json.put(User.ORGANISATION, u.getOrganisation());
+            json.put(User.FIELD_EMAIL, u.getEmail());
+            json.put(User.FIELD_FIRST_NAME, u.getFirstname());
+            json.put(User.FIELD_LAST_NAME, u.getLastname());
+            json.put(User.FIELD_JOB_TITLE, u.getJobTitle());
+            json.put(User.FIELD_ORGANISATION, u.getOrganisation());
 
             List<CustomField> cFields = DbHelper.getInstance(ctx).getCustomFields();
             for (CustomField field : cFields){

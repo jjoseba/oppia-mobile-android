@@ -66,7 +66,6 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
     private Course course;
     private CompleteCourse parsedCourse;
     private List<Section> sections;
-    @Inject SharedPreferences prefs;
     private CourseIndexRecyclerViewAdapter adapter;
     private String digestJumpTo;
 
@@ -99,11 +98,11 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
                 boolean baselineCompleted = isBaselineCompleted();
                 if (baselineCompleted) {
                     course.setMetaPages(parsedCourse.getMetaPages());
-                    sections = (ArrayList<Section>) parsedCourse.getSections();
+                    sections = parsedCourse.getSections();
                     startCourseActivityByDigest(digest);
                     initializeCourseIndex(false);
                 } else {
-                    sections = (ArrayList<Section>) parsedCourse.getSections();
+                    sections = parsedCourse.getSections();
                     initializeCourseIndex(false);
                     showBaselineMessage(digest);
                 }

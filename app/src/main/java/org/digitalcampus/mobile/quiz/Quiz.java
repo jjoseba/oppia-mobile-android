@@ -588,7 +588,7 @@ public class Quiz implements Serializable {
                     String message = getGradeBoundaryMessageForLang(multilangMessage, lang);
                     gradeBoundaries.add(new GradeBoundary(grade, message));
                 }
-                Collections.sort(gradeBoundaries, GradeBoundary.sorByGradeDescending);
+                Collections.sort(gradeBoundaries, GradeBoundary.sortByGradeDescending);
             }
         } catch (JSONException e) {
             e.printStackTrace();

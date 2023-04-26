@@ -64,7 +64,7 @@ public class CourseMetaPageActivity extends AppActivity {
         
 		String title = cmp.getLang(prefLang).getContent();
 		binding.courseTitle.setText(title);
-		BigDecimal big = new BigDecimal(course.getVersionId());
+		BigDecimal big = BigDecimal.valueOf(course.getVersionId());
 		binding.courseVersionid.setText(big.toString());
 		binding.courseShortname.setText(course.getShortname());
 

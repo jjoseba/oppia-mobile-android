@@ -221,7 +221,8 @@ public class CourseUtils {
 
             @Override
             public void apiKeyInvalidated() {
-
+                // As this is done in the background, we don't notify the apiKey invalidation
+                // until the next time the user opens the app
             }
         });
         task.execute(url);

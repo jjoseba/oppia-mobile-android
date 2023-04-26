@@ -87,17 +87,17 @@ public class DownloadService extends FileIntentService {
         alternativeNotifier = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (!intent.hasExtra(DownloadService.SERVICE_URL) || !intent.hasExtra(DownloadService.SERVICE_ACTION)){
+                if (!intent.hasExtra(SERVICE_URL) || !intent.hasExtra(SERVICE_ACTION)){
                     //If the file URL and the action are not present, we can't identify it
                     return;
                 }
-                String action = intent.getStringExtra(DownloadService.SERVICE_ACTION);
+                String action = intent.getStringExtra(SERVICE_ACTION);
                 DownloadService.this.notifyDownloads(action);
             }
         };
 
         //We register the alternative notifier for sending notifications when no other BroadcasReceiver is set
-        IntentFilter broadcastFilter = new IntentFilter(DownloadService.BROADCAST_ACTION);
+        IntentFilter broadcastFilter = new IntentFilter(BROADCAST_ACTION);
         broadcastFilter.setPriority(IntentFilter.SYSTEM_LOW_PRIORITY);
         registerReceiver(alternativeNotifier, broadcastFilter);
 
@@ -105,7 +105,7 @@ public class DownloadService extends FileIntentService {
 
     private void notifyDownloads(String action) {
         //If there are no more pending downloads after the completion of this one, send a Notification
-        if (action.equals(FileIntentService.ACTION_COMPLETE) && (tasksDownloading==null || tasksDownloading.isEmpty())){
+        if (action.equals(ACTION_COMPLETE) && (tasksDownloading==null || tasksDownloading.isEmpty())){
             Log.d(TAG, "Sending notification from Service for the completion of all pending media downloads");
 
             PendingIntent contentIntent = PendingIntent.getActivity(this, 0, new Intent(), PendingIntent.FLAG_CANCEL_CURRENT);
