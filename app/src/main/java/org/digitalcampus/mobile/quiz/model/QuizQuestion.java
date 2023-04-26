@@ -17,11 +17,11 @@
 
 package org.digitalcampus.mobile.quiz.model;
 
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.digitalcampus.mobile.quiz.Quiz;
 import org.digitalcampus.oppia.analytics.Analytics;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -36,6 +36,11 @@ public class QuizQuestion implements Serializable {
     public static final String TAG = QuizQuestion.class.getSimpleName();
     private static final long serialVersionUID = 852385823168202643L;
 
+    public static final String JSON_KEY_QUESTION_PROP_LABEL = "label";
+    public static final String JSON_KEY_QUESTION_PROP_DEPEND_ITEM_LABEL = "dependitemlabel";
+    public static final String JSON_KEY_QUESTION_PROP_DEPEND_VALUE = "dependvalue";
+
+
     protected int id;
     protected float userscore = 0;
     private Map<String, String> title = new HashMap<>();
@@ -44,6 +49,7 @@ public class QuizQuestion implements Serializable {
     protected List<Response> responseOptions = new ArrayList<>();
     protected List<String> userResponses = new ArrayList<>();
     protected String feedback = "";
+    private boolean skipped;
 
     public void addResponseOption(Response r) {
         responseOptions.add(r);
@@ -64,6 +70,10 @@ public class QuizQuestion implements Serializable {
         return this.userResponses;
     }
 
+    public void clearUserResponses() {
+        this.userResponses.clear();
+    }
+
     public void mark(String lang) {
         // loop through the responses
         // find whichever are set as selected and add up the responses
@@ -73,7 +83,7 @@ public class QuizQuestion implements Serializable {
                 if (r.getTitle(lang).equals(a)) {
                     total += r.getScore();
                     String feedbackLang = r.getFeedback(lang);
-                    if (!TextUtils.isEmpty(feedbackLang)) {
+                    if (!TextUtilsJava.isEmpty(feedbackLang)) {
                         feedback = feedbackLang;
                     }
                 }
@@ -164,6 +174,23 @@ public class QuizQuestion implements Serializable {
         return true;
     }
 
+    public boolean isAnswered(){
+        return !userResponses.isEmpty();
+    }
+
+
+    public String getLabel() {
+        return getProp(JSON_KEY_QUESTION_PROP_LABEL);
+    }
+
+    public String getDependItemLabel() {
+        return getProp(JSON_KEY_QUESTION_PROP_DEPEND_ITEM_LABEL);
+    }
+
+    public String getDependValue() {
+        return getProp(JSON_KEY_QUESTION_PROP_DEPEND_VALUE);
+    }
+
     public int getScoreAsPercent() {
         if (this.getMaxScore() > 0) {
             return (int) (100 * this.getUserscore()) / this.getMaxScore();
@@ -181,4 +208,25 @@ public class QuizQuestion implements Serializable {
         return feedbackDisplayed;
     }
 
+    public void setSkipped(boolean skipped) {
+        this.skipped = skipped;
+    }
+
+    public boolean isSkipped() {
+        return skipped;
+    }
+
+    public boolean isUserInputResponse(){ return false; }
+
+    public void updateUserResponsesLang(String previousLang, String newLang){
+        List<String> newLangResponses = new ArrayList<>();
+        for (String userResponse : this.getUserResponses()){
+            for (Response r : this.getResponseOptions()){
+                if (r.getTitle(previousLang).equalsIgnoreCase(userResponse)){
+                    newLangResponses.add(r.getTitle(newLang));
+                }
+            }
+        }
+        this.setUserResponses(newLangResponses);
+    }
 }

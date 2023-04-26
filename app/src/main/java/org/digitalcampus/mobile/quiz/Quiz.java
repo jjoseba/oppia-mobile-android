@@ -19,6 +19,7 @@ package org.digitalcampus.mobile.quiz;
 
 import android.util.Log;
 
+import org.digitalcampus.mobile.quiz.model.GradeBoundary;
 import org.digitalcampus.mobile.quiz.model.QuizQuestion;
 import org.digitalcampus.mobile.quiz.model.Response;
 import org.digitalcampus.mobile.quiz.model.questiontypes.Description;
@@ -31,6 +32,7 @@ import org.digitalcampus.mobile.quiz.model.questiontypes.ShortAnswer;
 import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.model.GamificationEvent;
 import org.digitalcampus.oppia.utils.DateUtils;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -38,11 +40,14 @@ import org.json.JSONObject;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Quiz implements Serializable {
 
@@ -84,6 +89,7 @@ public class Quiz implements Serializable {
     public static final String JSON_PROPERTY_REQUIRED = "required";
     public static final String JSON_PROPERTY_MAXATTEMPTS = "maxattempts";
     public static final String JSON_PROPERTY_RANDOMSELECT = "randomselect";
+
 
     private static final long serialVersionUID = -2416034891439585524L;
     private int id;
@@ -217,7 +223,7 @@ public class Quiz implements Serializable {
         if (questionProps.names() != null){
             for (int k = 0; k < questionProps.names().length(); k++) {
                 qProps.put(questionProps.names().getString(k),
-                        questionProps.getString(questionProps.names().getString(k)));
+                        questionProps.get(questionProps.names().getString(k)).toString());
             }
             question.setProps(qProps);
         }
@@ -281,7 +287,7 @@ public class Quiz implements Serializable {
         if (responseProps.names() != null) {
             for (int m = 0; m < responseProps.names().length(); m++) {
                 rProps.put(responseProps.names().getString(m),
-                        responseProps.getString(responseProps.names().getString(m)));
+                        responseProps.get(responseProps.names().getString(m)).toString());
             }
         }
         responseOption.setProps(rProps);
@@ -290,22 +296,86 @@ public class Quiz implements Serializable {
     }
 
     public boolean hasNext() {
-        return this.currentq + 1 < questions.size();
+        return hasNext(currentq);
+    }
+
+    private boolean hasNext(int questionId){
+        checkQuestionsSkipped(questionId);
+        int nextQuestionId = questionId + 1;
+        if (nextQuestionId < questions.size()) {
+            QuizQuestion nexQuestion = questions.get(nextQuestionId);
+            if(nexQuestion.isSkipped()){
+                return hasNext(nextQuestionId);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public void moveNext() {
+        if (currentq < questions.size() - 1) {
+
+            currentq++;
+
+            QuizQuestion nextQuestion = questions.get(currentq);
+            if (nextQuestion.isSkipped()) {
+                moveNext();
+            }
+        }
     }
 
     public boolean hasPrevious() {
         return this.currentq > 0;
     }
 
-    public void moveNext() {
-        if (currentq + 1 < questions.size()) {
-            currentq++;
-        }
-    }
-
     public void movePrevious() {
         if (currentq > 0) {
             currentq--;
+
+            QuizQuestion previousQuestion = questions.get(currentq);
+            if (previousQuestion.isSkipped()) {
+                previousQuestion.setSkipped(false);
+                previousQuestion.clearUserResponses();
+                movePrevious();
+            }
+        }
+    }
+
+    /**
+     * Checks which questions need to be skipped in the quiz.
+     *
+     * Forward loop - Checks the questions following to the current question.
+     *                Goes from the question after the current until the last question
+     * Backward loop - Checks the questions previous to the current question.
+     *                 Goes from the first question until the current question (this one included)
+     */
+    private void checkQuestionsSkipped(int questionId) {
+        for (int forward = questionId + 1; forward < questions.size(); forward++) {
+            QuizQuestion forwardQuestion = questions.get(forward);
+            if (TextUtilsJava.isEmpty(forwardQuestion.getDependItemLabel())) {
+                continue;
+            }
+
+            for (int backward = 0; backward <= questionId; backward++) {
+                QuizQuestion backwardQuestion = questions.get(backward);
+                if (TextUtilsJava.equals(backwardQuestion.getLabel(), forwardQuestion.getDependItemLabel())) {
+                    if (backwardQuestion.isSkipped()) {
+                        forwardQuestion.setSkipped(true);
+                        continue;
+                    }
+
+                    for (String userResponse : backwardQuestion.getUserResponses()) {
+                        String userResponseValue = userResponse.toLowerCase().trim();
+                        String forwardQuestionDependentValue = forwardQuestion.getDependValue().toLowerCase();
+                        if (TextUtilsJava.equals(userResponseValue, forwardQuestionDependentValue)) {
+                            forwardQuestion.setSkipped(false);
+                            break;
+                        } else {
+                            forwardQuestion.setSkipped(true);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -379,6 +449,10 @@ public class Quiz implements Serializable {
         this.maxscore = maxscore;
     }
 
+    public float getQuizPercentageScore() {
+        return this.getUserscore() * 100 / this.getMaxscore();
+    }
+
     public int getTotalNoQuestions() {
         int noQs = 0;
         for (QuizQuestion q: questions){
@@ -424,11 +498,27 @@ public class Quiz implements Serializable {
     }
 
     public int getShowFeedback(){
-        return propsSerializedGetInt("showfeedback",SHOW_FEEDBACK_ALWAYS);
+        return propsSerializedGetInt("showfeedback", SHOW_FEEDBACK_ALWAYS);
+    }
+
+    public boolean isPasswordProtected(){
+        return !TextUtilsJava.isEmpty(this.getPassword());
+    }
+
+    public String getPassword(){
+        return propsSerializedGetString("password", null);
     }
 
     public int getAvailability(){
-        return propsSerializedGetInt("availability",AVAILABILITY_ALWAYS);
+        return propsSerializedGetInt("availability", AVAILABILITY_ALWAYS);
+    }
+
+    public boolean mustShowQuizResultsAtEnd(){
+        return propsSerializedGetBoolean("immediate_whether_correct", true);
+    }
+
+    public boolean mustShowQuizResultsLater(){
+        return propsSerializedGetBoolean("later_whether_correct", true);
     }
 
     private int propsSerializedGetInt(String key, int defaultValue){
@@ -441,7 +531,127 @@ public class Quiz implements Serializable {
         return defaultValue;
     }
 
+    private boolean propsSerializedGetBoolean(String key, boolean defaultValue){
+        try {
+            JSONObject json = new JSONObject(propsSerialized);
+            return json.getBoolean(key);
+        } catch (JSONException jsone) {
+            Log.d(TAG, "Error getting boolean from propsSerialized " + key);
+        }
+        return defaultValue;
+    }
+
+    private String propsSerializedGetString(String key, String defaultValue){
+        try {
+            JSONObject json = new JSONObject(propsSerialized);
+            return json.isNull(key) ? null : json.getString(key);
+        } catch (JSONException jsone) {
+            Log.d(TAG, "Error getting int from propsSerialized " + key);
+        }
+        return defaultValue;
+    }
+
+    private JSONArray propsSerializedGetJSONArray(String key) {
+        try {
+            JSONObject json = new JSONObject(propsSerialized);
+            return json.isNull(key) ? null : json.getJSONArray(key);
+        } catch (JSONException jsone) {
+            Log.d(TAG, "Error getting JSONArray from propsSerialized " + key);
+        }
+        return null;
+    }
+
     public int getMaxAttempts() { return maxattempts; }
     public boolean limitAttempts(){ return maxattempts > 0; }
     private void setMaxAttempts(int maxAttempts) { this.maxattempts = maxAttempts; }
+
+    public void updateResponsesAfterLanguageChange(String previousLang, String newLang){
+        for (QuizQuestion question : questions){
+            if (!question.isAnswered() || question.isUserInputResponse()){
+                continue;
+            }
+            question.updateUserResponsesLang(previousLang, newLang);
+        }
+    }
+
+    private List<GradeBoundary> getGradeBoundaries(String lang) {
+        ArrayList<GradeBoundary> gradeBoundaries = new ArrayList<>();
+        JSONArray gradeBoundariesJSON = propsSerializedGetJSONArray("grade_boundaries");
+
+        try {
+            if(gradeBoundariesJSON != null) {
+                for (int i = 0; i < gradeBoundariesJSON.length(); i++) {
+                    JSONObject gradeBoundary = gradeBoundariesJSON.getJSONObject(i);
+                    String gradeStr = gradeBoundary.keys().next();
+                    int grade = Integer.parseInt(gradeStr);
+                    String multilangMessage = gradeBoundary.getString(gradeStr);
+                    String message = getGradeBoundaryMessageForLang(multilangMessage, lang);
+                    gradeBoundaries.add(new GradeBoundary(grade, message));
+                }
+                Collections.sort(gradeBoundaries, GradeBoundary.sorByGradeDescending);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return gradeBoundaries;
+    }
+
+    private String getGradeBoundaryMessageForLang(String multilangMessage, String lang) {
+        String defaultMessage = "";
+        String[] messages = multilangMessage.trim().split("\r\n");
+
+        for (String message : messages) {
+            String[] messageSplit = message.split("="); // Split language code and message
+            if (messageSplit.length == 1) {
+                return messageSplit[0]; // If there is no language code, this is the message
+            }
+            String langCode = messageSplit[0];
+            String messageText = messageSplit[1];
+            if (langCode.equalsIgnoreCase(lang)){
+                return messageText;
+            } else if (defaultMessage.isEmpty()) {
+                defaultMessage = messageText;   // Set first message as default message in case
+                                                // language is not found
+            }
+        }
+        return defaultMessage;
+    }
+
+    // Get the feedback message associated to a grade. The learner must get a grade
+    // that is greater or equal than the defined grade boundaries
+    public String getFeedbackMessageBasedOnQuizGrade(float quizGrade) {
+        List<GradeBoundary> gradeBoundaries = this.getGradeBoundaries(defaultLang);
+        for(GradeBoundary gradeBoundary : gradeBoundaries) {
+            if(quizGrade >= gradeBoundary.getGrade()){
+                return cleanFeedbackMessage(gradeBoundary.getMessage());
+            }
+        }
+        return null;
+    }
+
+    // Replace placeholders in the form of {{property_name}} by the value of property_name
+    private String cleanFeedbackMessage(String feedbackMessage) {
+        Pattern p = Pattern.compile("\\{\\{(\\w+)\\}\\}");
+        Matcher m = p.matcher(feedbackMessage);
+        while (m.find()) {
+            String placeholder = m.group();
+            String propertyName = placeholder.replaceAll("[{}]", "");
+            String propertyValue = getPropertyValue(propertyName);
+            if(propertyValue != null) {
+                feedbackMessage = feedbackMessage.replace(placeholder, propertyValue);
+            }
+        }
+        return feedbackMessage;
+    }
+
+    // Get a property´s value by its name, or null if the property name is not included.
+    private String getPropertyValue(String propertyName) {
+        switch (propertyName) {
+            case "user_score": return String.valueOf(Math.round(this.getUserscore()));
+            case "max_score": return String.valueOf(Math.round(this.getMaxscore()));
+            case "score_percentage": return String.valueOf(Math.round(this.getQuizPercentageScore()));
+            default: return null;
+        }
+    }
 }

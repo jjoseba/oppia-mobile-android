@@ -18,10 +18,10 @@
 package org.digitalcampus.oppia.model;
 
 import android.content.Context;
-import android.text.TextUtils;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.utils.DateUtils;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.joda.time.DateTime;
 
 import java.io.Serializable;
@@ -162,9 +162,11 @@ public class QuizAttempt implements Serializable {
 
 		ArrayList<String> jsonQuizAttempts = new ArrayList<>();
 		for (QuizAttempt qa : quizAttempts){
-			jsonQuizAttempts.add(qa.getData());
+			if (qa.getData() != null) {
+				jsonQuizAttempts.add(qa.getData());
+			}
 		}
-		return "[" +  TextUtils.join(",", jsonQuizAttempts) + "]";
+		return "[" +  TextUtilsJava.join(",", jsonQuizAttempts) + "]";
 
 	}
 

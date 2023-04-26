@@ -17,12 +17,15 @@
 
 package org.digitalcampus.oppia.utils.storage;
 
-import android.text.TextUtils;
+import android.content.Context;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
+import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.application.App;
+import org.digitalcampus.oppia.exception.CourseInstallException;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -36,7 +39,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
+import java.util.Enumeration;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
@@ -52,13 +57,13 @@ public class FileUtils {
     // This function converts the zip file into uncompressed files which are
     // placed in the destination directory
     // destination directory should be created first
-    public static boolean unzipFiles(String srcDirectory, String srcFile, String destDirectory) {
+    public static void unzipFiles(Context context, String srcDirectory, String srcFile, String destDirectory) throws CourseInstallException {
 
         // first make sure that all the arguments are valid and not null
-        if (TextUtils.isEmpty(srcDirectory)
-                || TextUtils.isEmpty(srcFile)
-                || TextUtils.isEmpty(destDirectory)) {
-            return false;
+        if (TextUtilsJava.isEmpty(srcDirectory)
+                || TextUtilsJava.isEmpty(srcFile)
+                || TextUtilsJava.isEmpty(destDirectory)) {
+            throw new CourseInstallException(context.getString(R.string.invalid_parameters));
         }
 
         // now make sure that these directories exist
@@ -66,11 +71,37 @@ public class FileUtils {
         File sourceFile = new File(srcDirectory + File.separator + srcFile);
         File destinationDirectory = new File(destDirectory);
 
-        if (!sourceDirectory.exists()
-                || !sourceFile.exists()
-                || !destinationDirectory.exists()) {
-            return false;
+        if (!sourceDirectory.exists()) {
+            throw new CourseInstallException(context.getString(R.string.source_dir_does_not_exist));
         }
+
+        if (!sourceFile.exists()) {
+            throw new CourseInstallException(context.getString(R.string.source_file_does_not_exist));
+        }
+
+        if (!destinationDirectory.exists()) {
+            throw new CourseInstallException(context.getString(R.string.dest_dir_does_not_exist));
+        }
+
+        long availableStorage = Storage.getAvailableStorageSize(context);
+        long uncompressedSize = 0;
+        try (ZipFile zipFile = new ZipFile(sourceFile)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry zipEntry = entries.nextElement();
+                uncompressedSize += zipEntry.getSize();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new CourseInstallException(e.getMessage());
+        }
+
+        Log.i(TAG, "unzipFiles: sizes: uncompressed: " + uncompressedSize + ". available storage: " + availableStorage);
+
+        if (uncompressedSize > availableStorage) {
+            throw new CourseInstallException(context.getString(R.string.error_insufficient_storage_available));
+        }
+
 
         try (FileInputStream fis = new FileInputStream(sourceFile);
              ZipInputStream zis = new ZipInputStream(new BufferedInputStream(fis))) {
@@ -81,20 +112,22 @@ public class FileUtils {
 
             while ((entry = zis.getNextEntry()) != null) {
 
-                if (entry.getName().startsWith("..")) {
+                File f = new File(destDirectory, entry.getName());
+                String canonicalPath = f.getCanonicalPath();
+
+                File fileDestDir = new File(destDirectory);
+                String destDirCanonicalPath = fileDestDir.getCanonicalPath();
+
+                if (!canonicalPath.startsWith(destDirCanonicalPath)) {
                     throw new SecurityException("Suspect file: " + entry.getName()
                             + ". Possibility of trying to access parent directory");
                 }
-
-                String outputFilename = destDirectory + File.separator + entry.getName();
 
                 createDirIfNeeded(destDirectory, entry);
 
                 int count;
 
                 byte[] data = new byte[BUFFER_SIZE];
-
-                File f = new File(outputFilename);
 
                 // write the file to the disk
                 if (!f.isDirectory()) {
@@ -113,10 +146,9 @@ public class FileUtils {
         } catch (Exception e) {
             Analytics.logException(e);
             Log.d(TAG, "Exception:", e);
-            return false;
+            throw new CourseInstallException(e.getMessage());
         }
 
-        return true;
     }
 
 
@@ -150,7 +182,7 @@ public class FileUtils {
                     out.write(data, 0, count);
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             Analytics.logException(e);
             Log.d(TAG, "Exception:", e);
             return false;
@@ -170,12 +202,12 @@ public class FileUtils {
         File[] fileList = folder.listFiles();
 
         for (File file : fileList) {
-                if (file.isDirectory()) {
-                    zipSubFolder(out, file, basePathLength);
-                } else {
-                    String unmodifiedFilePath = file.getPath();
-                    try (FileInputStream fi = new FileInputStream(unmodifiedFilePath);
-                         BufferedInputStream origin = new BufferedInputStream(fi, BUFFER)) {
+            if (file.isDirectory()) {
+                zipSubFolder(out, file, basePathLength);
+            } else {
+                String unmodifiedFilePath = file.getPath();
+                try (FileInputStream fi = new FileInputStream(unmodifiedFilePath);
+                     BufferedInputStream origin = new BufferedInputStream(fi, BUFFER)) {
 
                     byte[] data = new byte[BUFFER];
                     String relativePath = unmodifiedFilePath

@@ -1,12 +1,16 @@
 package androidTestFiles.database;
 
 import org.digitalcampus.oppia.database.DbHelper;
+import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.GamificationEvent;
 import org.digitalcampus.oppia.model.Lang;
+import org.digitalcampus.oppia.model.QuizAttempt;
+import org.digitalcampus.oppia.model.TrackerLog;
 import org.digitalcampus.oppia.model.User;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -41,20 +45,32 @@ public class TestDataManager {
     }
 
     // courses
-    public void addCourses(){
+    public void addCourse() {
+        addCourse(1, "my-course");
+    }
+
+    public Course addCourse(int courseId, String shortname){
         Course c = new Course();
-        c.setCourseId(100);
-        c.setShortname("my-course");
+        c.setCourseId(courseId);
+        c.setShortname(shortname);
         Lang l = new Lang("en", "course title");
         ArrayList langList = new ArrayList<>();
         langList.add(l);
         c.setTitles(langList);
         dbHelper.addOrUpdateCourse(c);
+        return c;
     }
 
 
 
     // activities/sections
+
+    public void addActivity(String digest, int courseId) {
+        Activity activity = new Activity();
+        activity.setDigest(digest);
+        activity.setCourseId(courseId);
+        dbHelper.insertActivities(Arrays.asList(activity));
+    }
 
     public void addActivityGamification() {
 
@@ -80,10 +96,57 @@ public class TestDataManager {
         dbHelper.insertCourseGamification(1234, gamificationEvents);
     }
 
+    public void addQuizAttempts(int num) {
+
+        addUsers();
+        addCourse();
+
+        for (int i = 0; i < num; i++) {
+            QuizAttempt qa = new QuizAttempt();
+            qa.setCourseId(1);
+            qa.setUserId(1);
+            qa.setData("[{\"some\": \"data\"}]");
+            dbHelper.insertQuizAttempt(qa);
+        }
+
+    }
+
+    public void addQuizAttemptsWithNullData(int num) {
+
+        addUsers();
+        addCourse();
+
+        for (int i = 0; i < num; i++) {
+            QuizAttempt qa = new QuizAttempt();
+            qa.setCourseId(1);
+            qa.setUserId(1);
+            dbHelper.insertQuizAttempt(qa);
+        }
+
+    }
+
+    public void addTrackers(int num) {
+
+        addUsers();
+        addCourse();
+
+        List<TrackerLog> trackerList = new ArrayList<>();
+
+        for (int i = 0; i < num; i++) {
+            TrackerLog trackerLog = new TrackerLog();
+            trackerLog.setCompleted(true);
+            trackerLog.setCourseId(1);
+            trackerLog.setUserId(1);
+            trackerLog.setDigest("test_digest");
+
+            trackerList.add(trackerLog);
+        }
+
+        dbHelper.insertTrackers(trackerList);
+    }
+
     // quizzes
 
-    // trackers
 
 
-    // quiz attempts
 }

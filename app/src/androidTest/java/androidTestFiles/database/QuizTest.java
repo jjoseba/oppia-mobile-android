@@ -1,47 +1,39 @@
 package androidTestFiles.database;
 
+import android.Manifest;
+
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.rule.GrantPermissionRule;
 
 import org.digitalcampus.oppia.model.QuizAttempt;
-import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
 @RunWith(AndroidJUnit4.class)
 public class QuizTest extends BaseTestDB {
+    @Rule
+    public GrantPermissionRule mRuntimePermissionRule = GrantPermissionRule.grant(Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
-    @Ignore
     @Test
     public void getUnexportedQuizAttempts() {
 
-        getTestDataManager().addUsers();
-        getTestDataManager().addCourses();
+        getTestDataManager().addQuizAttempts(1);
 
-        QuizAttempt qa = new QuizAttempt();
-        qa.setCourseId(1);
-        qa.setUserId(1);
-        qa.setSent(true);
-        getDbHelper().insertQuizAttempt(qa);
+        List<QuizAttempt> quizAttempts = getDbHelper().getUnexportedQuizAttempts(1);
+        assertEquals(1, quizAttempts.size());
 
-        ArrayList<QuizAttempt> quizAttempts = (ArrayList<QuizAttempt>)
-                getDbHelper().getUnexportedQuizAttempts(1);
-        assertEquals(0, quizAttempts.size());
-
-        // TODO this test is not passing. insertQuizAttempt method does not add "sent" value.
     }
 
-    // getGlobalQuizAttempts
     @Test
     public void getGlobalQuizAttempts() {
 
         // TODO - add some test data here to really check
-        List<QuizAttempt> quizAttempts = (ArrayList<QuizAttempt>)
-                getDbHelper().getGlobalQuizAttempts(1, "en");
+        List<QuizAttempt> quizAttempts = getDbHelper().getGlobalQuizAttempts(1, "en");
         assertEquals(0, quizAttempts.size());
 
     }

@@ -37,6 +37,8 @@ public class Tag implements Serializable{
 	private int orderPriority;
 	private String icon;
 	private boolean highlight = false;
+	private int countNewDownloadEnabled = -1;
+	private int countAvailable;
 	
 	private ArrayList<Course> courses = new ArrayList<>();
 	
@@ -48,10 +50,7 @@ public class Tag implements Serializable{
 	}
 	public int getCount() {
 		// count should not be under 0
-		if (this.count < 0){
-			return 0;
-		}
-		return count;
+		return Math.max(0, count);
 	}
 	public void setCount(int count) {
 		this.count = count;
@@ -92,6 +91,29 @@ public class Tag implements Serializable{
 	public void setHighlight(boolean highlight) {
 		this.highlight = highlight;
 	}
-	
-	
+
+
+	public int getCountNewDownloadEnabled() {
+		return countNewDownloadEnabled;
+	}
+
+	public void setCountNewDownloadEnabled(int countNewDownloadEnabled) {
+		this.countNewDownloadEnabled = countNewDownloadEnabled;
+	}
+
+	public int getCountAvailable() {
+		return countAvailable;
+	}
+
+	public void setCountAvailable(int countAvailable) {
+		this.countAvailable = countAvailable;
+	}
+
+	public void incrementCountAvailable() {
+		this.countAvailable++;
+	}
+
+	public void decrementCountAvailable() {
+		this.countAvailable--;
+	}
 }

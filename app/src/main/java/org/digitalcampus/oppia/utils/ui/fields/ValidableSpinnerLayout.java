@@ -2,7 +2,7 @@ package org.digitalcampus.oppia.utils.ui.fields;
 
 import android.content.Context;
 import android.os.Build;
-import android.text.TextUtils;
+import android.text.Spanned;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,12 +14,14 @@ import android.widget.TextView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.model.CustomField;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.text.HtmlCompat;
 
 public class ValidableSpinnerLayout extends LinearLayout implements ValidableField, AdapterView.OnItemSelectedListener {
 
@@ -78,11 +80,15 @@ public class ValidableSpinnerLayout extends LinearLayout implements ValidableFie
     }
 
     private void updateLabelText(){
-        String inputLabel = label;
         if (required && input != null){
-            inputLabel += " *";
+            labelText.setText(addRedAsterisk(label));
         }
-        labelText.setText(inputLabel);
+    }
+
+    private Spanned addRedAsterisk(CharSequence text){
+        String html = String.format(REQUIRED_SPANNED_HINT, text);
+        Spanned spanned = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY);
+        return spanned;
     }
 
     @Override
@@ -96,7 +102,7 @@ public class ValidableSpinnerLayout extends LinearLayout implements ValidableFie
             return;
         }
         for (int i=0; i<items.size(); i++){
-            if (TextUtils.equals(items.get(i).getKey(), key)){
+            if (TextUtilsJava.equals(items.get(i).getKey(), key)){
                 int position = i + (selected ? 0 : 1);
                 input.setSelection(position);
                 onItemSelected(null, null, position, 0);

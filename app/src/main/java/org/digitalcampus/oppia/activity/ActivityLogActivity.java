@@ -1,26 +1,27 @@
 package org.digitalcampus.oppia.activity;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityActivitylogBinding;
-import org.digitalcampus.mobile.learning.databinding.DialogDeleteAccountBinding;
 import org.digitalcampus.oppia.adapter.ExportedTrackersFileAdapter;
+import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
 import org.digitalcampus.oppia.database.DbHelper;
+import org.digitalcampus.oppia.listener.APIRequestFinishListener;
 import org.digitalcampus.oppia.listener.ExportActivityListener;
 import org.digitalcampus.oppia.listener.TrackerServiceListener;
 import org.digitalcampus.oppia.model.ActivityLogRepository;
+import org.digitalcampus.oppia.model.QuizAttempt;
 import org.digitalcampus.oppia.task.ExportActivityTask;
+import org.digitalcampus.oppia.task.SubmitQuizAttemptsTask;
 import org.digitalcampus.oppia.task.SubmitTrackerMultipleTask;
+import org.digitalcampus.oppia.task.result.BasicResult;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.UIUtils;
 import org.digitalcampus.oppia.utils.resources.ExternalResourceOpener;
 
@@ -36,8 +37,11 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-public class ActivityLogActivity extends AppActivity implements TrackerServiceListener, ExportActivityListener, ExportedTrackersFileAdapter.OnItemClickListener {
+public class ActivityLogActivity extends AppActivity implements TrackerServiceListener, ExportActivityListener, ExportedTrackersFileAdapter.OnItemClickListener, APIRequestFinishListener {
 
+
+    @Inject
+    ApiEndpoint apiEndpoint;
 
     @Inject
     ActivityLogRepository logsRepository;
@@ -72,17 +76,15 @@ public class ActivityLogActivity extends AppActivity implements TrackerServiceLi
             if (omSubmitTrackerMultipleTask == null) {
                 Log.d(TAG, "Sumitting trackers multiple task");
                 updateActions(false);
-                omSubmitTrackerMultipleTask = new SubmitTrackerMultipleTask(ActivityLogActivity.this);
+                omSubmitTrackerMultipleTask = new SubmitTrackerMultipleTask(ActivityLogActivity.this, apiEndpoint);
                 omSubmitTrackerMultipleTask.setTrackerServiceListener(ActivityLogActivity.this);
                 omSubmitTrackerMultipleTask.execute();
             }
         });
 
         binding.exportBtn.setOnClickListener(v -> {
-
             showCompleteExportMessage = true;
             exportActivities();
-
         });
 
         binding.exportedFilesList.setLayoutManager(new LinearLayoutManager(this));
@@ -103,8 +105,7 @@ public class ActivityLogActivity extends AppActivity implements TrackerServiceLi
     }
 
     private void shareFile(File toShare){
-        Intent share = ExternalResourceOpener.constructShareFileIntent(this, toShare);
-        startActivity(share);
+        ExternalResourceOpener.shareFile(this, toShare, "text/json");
     }
 
     private void exportActivities() {
@@ -113,7 +114,7 @@ public class ActivityLogActivity extends AppActivity implements TrackerServiceLi
             ExportActivityTask task = new ExportActivityTask(ActivityLogActivity.this);
             task.setListener(ActivityLogActivity.this);
             updateActions(false);
-            task.execute();
+            task.execute(ExportActivityTask.UNEXPORTED_ACTIVITY);
         });
     }
 
@@ -132,11 +133,12 @@ public class ActivityLogActivity extends AppActivity implements TrackerServiceLi
     private void refreshStats() {
 
         DbHelper db = DbHelper.getInstance(this);
-        int unsent = db.getUnsentTrackersCount();
+        int unsentQuizzes = db.getUnsentQuizAttempts().size();
+        int unsent = db.getUnsentTrackersCount() + unsentQuizzes;
         int unexported = db.getUnexportedTrackersCount();
         binding.highlightToExport.setText(NumberFormat.getNumberInstance().format(unexported));
         binding.highlightToSubmit.setText(NumberFormat.getNumberInstance().format(unsent));
-        binding.highlightSubmitted.setText(NumberFormat.getNumberInstance().format(db.getSentTrackersCount()));
+        binding.highlightSubmitted.setText(NumberFormat.getNumberInstance().format(db.getSentActivityCount()));
 
         Log.d(TAG, "files " + files.size());
         binding.submitBtn.setEnabled((unsent > 0) || !files.isEmpty());
@@ -170,11 +172,23 @@ public class ActivityLogActivity extends AppActivity implements TrackerServiceLi
 
         if (!failures.isEmpty()){
             msg += "\nErrors: \n";
-            msg += TextUtils.join("\n", failures);
+            msg += TextUtilsJava.join("\n", failures);
         }
 
         Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-        updateActions(true);
+
+        DbHelper db = DbHelper.getInstance(getApplicationContext());
+        List<QuizAttempt> unsent = db.getUnsentQuizAttempts();
+
+        if (unsent.isEmpty()) {
+            updateActions(true);
+        } else {
+            SubmitQuizAttemptsTask omSubmitQuizAttemptsTask = new SubmitQuizAttemptsTask(getApplicationContext());
+            omSubmitQuizAttemptsTask.setAPIRequestFinishListener(this, "SubmitQuizAttemptsTask");
+            omSubmitQuizAttemptsTask.execute(unsent);
+        }
+
+        omSubmitTrackerMultipleTask = null;
     }
 
     @Override
@@ -183,19 +197,23 @@ public class ActivityLogActivity extends AppActivity implements TrackerServiceLi
     }
 
     @Override
-    public void onExportComplete(String filename) {
+    public void onRequestFinish(String nameRequest) {
+        if ("SubmitQuizAttemptsTask".equals(nameRequest)){
+            updateActions(true);
+        }
+    }
+
+    @Override
+    public void onExportComplete(BasicResult result) {
 
         if (showCompleteExportMessage) {
-
-            if (filename != null) {
+            if (result.isSuccess()) {
                 UIUtils.showAlert(this,
                         R.string.export_task_completed,
-                        getString(R.string.export_task_completed_text, filename)
+                        getString(R.string.export_task_completed_text, result.getResultMessage())
                 );
             } else {
-                Toast.makeText(this,
-                        R.string.export_task_no_activities,
-                        Toast.LENGTH_LONG).show();
+                toast(result.getResultMessage());
             }
 
         }

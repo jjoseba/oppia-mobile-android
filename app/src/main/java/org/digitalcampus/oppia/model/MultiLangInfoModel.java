@@ -18,11 +18,11 @@
 package org.digitalcampus.oppia.model;
 
 import android.content.SharedPreferences;
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.analytics.Analytics;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -50,7 +50,7 @@ public class MultiLangInfoModel implements Serializable {
     }
 
     public String getTitle(SharedPreferences prefs){
-        return this.getTitle(prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage()));
+        return this.getTitle(prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage()));
     }
 
     public void setTitles(List<Lang> titles) {
@@ -70,7 +70,7 @@ public class MultiLangInfoModel implements Serializable {
     }
 
     public String getDescription(SharedPreferences prefs){
-        return this.getDescription(prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage()));
+        return this.getDescription(prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage()));
     }
 
     public void setDescriptions(List<Lang> descriptions) {
@@ -102,7 +102,7 @@ public class MultiLangInfoModel implements Serializable {
 
     private String getInfo(String lang, List<Lang> values){
         for(Lang l: values){
-            if(l.getLanguage().equals(lang)){
+            if(l.getLanguage().equalsIgnoreCase(lang)){
                 return l.getContent().trim();
             }
         }
@@ -171,7 +171,7 @@ public class MultiLangInfoModel implements Serializable {
         while(keys.hasNext()) {
             String key = keys.next();
             String value = jsonObjectMultilang.getString(key);
-            if (!TextUtils.isEmpty(value) && !TextUtils.equals(value,"null")){
+            if (!TextUtilsJava.isEmpty(value) && !TextUtilsJava.equals(value,"null")){
                 localLangs.add(new Lang(key, value));
             }
         }

@@ -4,7 +4,7 @@
     "en": null
   },
   "id": 1,
-  "is_draft": false,
+  "status": "live",
   "organisation": "",
   "priority": 0,
   "resource_uri": "/api/v2/course/1/",
@@ -14,5 +14,6 @@
   },
   "url": "http://localhost:8000/api/v2/course/1/download/",
   "username": "alexlittle",
-  "version": 20200120164032
+  "version": 20200120164032,
+  "restricted": false
 }

@@ -21,8 +21,18 @@ package org.digitalcampus.oppia.application;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.text.TextUtils;
 import android.util.Log;
+
+import androidx.multidex.MultiDex;
+import androidx.preference.PreferenceManager;
+import androidx.room.Room;
+import androidx.work.Constraints;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import org.digitalcampus.mobile.learning.BuildConfig;
 import org.digitalcampus.mobile.learning.R;
@@ -35,9 +45,10 @@ import org.digitalcampus.oppia.di.AppComponent;
 import org.digitalcampus.oppia.di.AppModule;
 import org.digitalcampus.oppia.di.DaggerAppComponent;
 import org.digitalcampus.oppia.service.CoursesChecksWorker;
-import org.digitalcampus.oppia.service.CoursesCompletionReminderWorker;
 import org.digitalcampus.oppia.service.CoursesCompletionReminderWorkerManager;
 import org.digitalcampus.oppia.service.TrackerWorker;
+import org.digitalcampus.oppia.service.UpdateUserProfileWorker;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.storage.Storage;
 import org.digitalcampus.oppia.utils.storage.StorageAccessStrategy;
 import org.digitalcampus.oppia.utils.storage.StorageAccessStrategyFactory;
@@ -47,16 +58,6 @@ import org.digitalcampus.oppia.utils.ui.OppiaNotificationUtils;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import androidx.multidex.MultiDex;
-import androidx.preference.PreferenceManager;
-import androidx.room.Room;
-import androidx.work.Constraints;
-import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.ExistingWorkPolicy;
-import androidx.work.NetworkType;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkManager;
 import io.github.inflationx.calligraphy3.CalligraphyConfig;
 import io.github.inflationx.calligraphy3.CalligraphyInterceptor;
 import io.github.inflationx.viewpump.ViewPump;
@@ -70,35 +71,8 @@ public class App extends Application {
     public static final String PRE_INSTALL_COURSES_DIR = "www/preload/courses"; // don't include leading or trailing slash
     public static final String PRE_INSTALL_MEDIA_DIR = "www/preload/media"; // don't include leading or trailing slash
 
-    // admin security settings
-    public static final boolean ADMIN_PROTECT_SETTINGS = BuildConfig.ADMIN_PROTECT_SETTINGS;
-    public static final boolean ADMIN_PROTECT_ADVANCED_SETTINGS = BuildConfig.ADMIN_PROTECT_ADVANCED_SETTINGS;
-    public static final boolean ADMIN_PROTECT_SECURITY_SETTINGS = BuildConfig.ADMIN_PROTECT_SECURITY_SETTINGS;
-    public static final boolean ADMIN_PROTECT_SERVER = BuildConfig.ADMIN_PROTECT_SERVER;
-    public static final boolean ADMIN_PROTECT_COURSE_DELETE = BuildConfig.ADMIN_PROTECT_COURSE_DELETE;
-    public static final boolean ADMIN_PROTECT_COURSE_RESET = BuildConfig.ADMIN_PROTECT_COURSE_RESET;
-    public static final boolean ADMIN_PROTECT_COURSE_INSTALL = BuildConfig.ADMIN_PROTECT_COURSE_INSTALL;
-    public static final boolean ADMIN_PROTECT_COURSE_UPDATE = BuildConfig.ADMIN_PROTECT_COURSE_UPDATE;
-    public static final boolean ADMIN_PROTECT_ACTIVITY_SYNC = BuildConfig.ADMIN_PROTECT_ACTIVITY_SYNC;
-    public static final boolean ADMIN_PROTECT_ACTIVITY_EXPORT = BuildConfig.ADMIN_PROTECT_ACTIVITY_EXPORT;
-
-    public static final boolean ADMIN_PROTECT_NOTIFICATIONS = BuildConfig.ADMIN_PROTECT_NOTIFICATIONS;
-    public static final boolean ADMIN_PROTECT_ENABLE_REMINDER_NOTIFICATIONS = BuildConfig.ADMIN_PROTECT_ENABLE_REMINDER_NOTIFICATIONS;
-    public static final boolean ADMIN_PROTECT_REMINDER_INTERVAL = BuildConfig.ADMIN_PROTECT_REMINDER_INTERVAL;
-    public static final boolean ADMIN_PROTECT_REMINDER_DAYS = BuildConfig.ADMIN_PROTECT_REMINDER_DAYS;
-    public static final boolean ADMIN_PROTECT_REMINDER_TIME = BuildConfig.ADMIN_PROTECT_REMINDER_TIME;
-
-    // tracker metadata settings
-    public static final boolean METADATA_INCLUDE_NETWORK = BuildConfig.METADATA_INCLUDE_NETWORK;
-    public static final boolean METADATA_INCLUDE_APP_INSTANCE_ID = BuildConfig.METADATA_INCLUDE_APP_INSTANCE_ID;
-    public static final boolean METADATA_INCLUDE_MANUFACTURER_MODEL = BuildConfig.METADATA_INCLUDE_MANUFACTURER_MODEL;
-    public static final boolean METADATA_INCLUDE_WIFI_ON = BuildConfig.METADATA_INCLUDE_WIFI_ON;
-    public static final boolean METADATA_INCLUDE_NETWORK_CONNECTED = BuildConfig.METADATA_INCLUDE_NETWORK_CONNECTED;
-    public static final boolean METADATA_INCLUDE_BATTERY_LEVEL = BuildConfig.METADATA_INCLUDE_BATTERY_LEVEL;
 
     // general other settings
-    public static final String MINT_API_KEY = BuildConfig.MINT_API_KEY;
-    public static final int DOWNLOAD_COURSES_DISPLAY = BuildConfig.DOWNLOAD_COURSES_DISPLAY; //this no of courses must be displayed for the 'download more courses' option to disappear
     public static final int USERNAME_MIN_CHARACTERS = 4;
     public static final int PASSWORD_MIN_LENGTH = 6;
     public static final int PAGE_READ_TIME = 3;
@@ -115,15 +89,6 @@ public class App extends Application {
     public static final boolean DEFAULT_DISPLAY_COMPLETED = true;
     public static final boolean DEFAULT_DISPLAY_PROGRESS_BAR = true;
 
-    public static final boolean MENU_ALLOW_COURSE_DOWNLOAD = BuildConfig.MENU_ALLOW_COURSE_DOWNLOAD;
-    public static final boolean MENU_ALLOW_LANGUAGE = BuildConfig.MENU_ALLOW_LANGUAGE;
-    public static final boolean MENU_ALLOW_SETTINGS = BuildConfig.MENU_ALLOW_SETTINGS;
-    public static final boolean MENU_ALLOW_SYNC = BuildConfig.MENU_ALLOW_SYNC;
-    public static final boolean MENU_ALLOW_LOGOUT = BuildConfig.MENU_ALLOW_LOGOUT;
-
-    public static final boolean SESSION_EXPIRATION_ENABLED = BuildConfig.SESSION_EXPIRATION_ENABLED; // whether to force users to be logged out after inactivity
-    public static final int SESSION_EXPIRATION_TIMEOUT = BuildConfig.SESSION_EXPIRATION_TIMEOUT; // no seconds before user is logged out for inactivity
-
     public static final int MAX_TRACKER_SUBMIT = 10;
     public static final String[] SUPPORTED_MEDIA_TYPES = {"video/m4v", "video/mp4", "audio/mpeg", "video/3gp", "video/3gpp"}; //NOSONAR
 
@@ -133,6 +98,7 @@ public class App extends Application {
     public static final String WORK_COURSES_CHECKS = "no_course_worker";
     public static final String WORK_COURSES_NOT_COMPLETED_REMINDER = "courses_reminder";
     public static final String WORK_COURSES_NOT_COMPLETED_REMINDER_ = "courses_reminder_";
+    public static final String WORK_USER_PROFILE_CHECKS = "user_profile_checks_worker";
 
 
     private AppComponent appComponent;
@@ -186,9 +152,14 @@ public class App extends Application {
         OppiaNotificationUtils.initializeOreoNotificationChannels(this);
 
 //        launchWorkerToTest();
-
     }
 
+    private void launchWorkerToTest() {
+
+        OneTimeWorkRequest request = OneTimeWorkRequest.from(CoursesChecksWorker.class);
+        WorkManager.getInstance(this)
+                .enqueueUniqueWork("worker_test", ExistingWorkPolicy.REPLACE, request);
+    }
 
 
     private void checkAppInstanceIdCreated(SharedPreferences prefs) {
@@ -201,7 +172,7 @@ public class App extends Application {
     private void configureStorageType() {
 
         String storageOption = getPrefs(this).getString(PrefsActivity.PREF_STORAGE_OPTION, "");
-        if (TextUtils.isEmpty(storageOption)) {
+        if (TextUtilsJava.isEmpty(storageOption)) {
             storageOption = PrefsActivity.STORAGE_OPTION_EXTERNAL;
         }
 
@@ -222,12 +193,6 @@ public class App extends Application {
         return db;
     }
 
-    private void launchWorkerToTest() {
-
-        OneTimeWorkRequest request = OneTimeWorkRequest.from(CoursesCompletionReminderWorker.class);
-        WorkManager.getInstance(this)
-                .enqueueUniqueWork("worker_test", ExistingWorkPolicy.REPLACE, request);
-    }
 
     private void setupPeriodicWorkers() {
 
@@ -235,9 +200,10 @@ public class App extends Application {
 
         if (backgroundData) {
             scheduleTrackerWork();
+            scheduleUserProfileChecksWork();
             scheduleCoursesChecksWork();
         } else {
-            cancelWorks(WORK_COURSES_CHECKS, WORK_TRACKER_SEND);
+            cancelWorks(WORK_COURSES_CHECKS, WORK_TRACKER_SEND, WORK_USER_PROFILE_CHECKS);
         }
 
         scheduleCoursesReminderWork();
@@ -285,6 +251,19 @@ public class App extends Application {
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(WORK_COURSES_CHECKS,
                 ExistingPeriodicWorkPolicy.REPLACE, trackerSendWork);
 
+    }
+
+    private void scheduleUserProfileChecksWork() {
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+        PeriodicWorkRequest userProfileCheckWork = new PeriodicWorkRequest.Builder(UpdateUserProfileWorker.class, 12, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(WORK_USER_PROFILE_CHECKS,
+                ExistingPeriodicWorkPolicy.REPLACE, userProfileCheckWork);
     }
 
 

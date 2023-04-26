@@ -17,21 +17,13 @@
 
 package org.digitalcampus.oppia.utils.storage;
 
-import android.app.Activity;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Environment;
 
-import androidx.preference.PreferenceManager;
-import androidx.documentfile.provider.DocumentFile;
-
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.listener.StorageAccessListener;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.io.File;
 
@@ -49,7 +41,7 @@ public class ExternalStorageStrategy implements StorageAccessStrategy {
     @Override
     public boolean isStorageAvailable(Context ctx) {
         String externalStorageLocation = getStorageLocation(ctx);
-        if (TextUtils.isEmpty(externalStorageLocation)) {
+        if (TextUtilsJava.isEmpty(externalStorageLocation)) {
             return false;
         }
 
@@ -65,7 +57,6 @@ public class ExternalStorageStrategy implements StorageAccessStrategy {
         else{
             return true;
         }
-//        return StorageUtils.getExternalMemoryDrive(ctx, true) != null;
     }
 
     @Override

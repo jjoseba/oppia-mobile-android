@@ -1,17 +1,16 @@
 package org.digitalcampus.oppia.task;
 
 import android.content.Context;
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.api.Paths;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.task.result.BasicResult;
 import org.digitalcampus.oppia.utils.HTTPClientUtils;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.io.IOException;
 
@@ -21,12 +20,20 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class DeleteAccountTask extends APIUserRequestTask{
+    private ResponseListener responseListener;
+
     public DeleteAccountTask(Context ctx) {
         super(ctx);
     }
 
     public DeleteAccountTask(Context ctx, ApiEndpoint api) {
         super(ctx, api);
+    }
+
+    public interface ResponseListener {
+        void onSuccess();
+
+        void onError(String error);
     }
 
     @Override
@@ -57,7 +64,7 @@ public class DeleteAccountTask extends APIUserRequestTask{
                     case 403: // unauthorised
                         result.setSuccess(false);
                         String message = response.body().string();
-                        if (TextUtils.isEmpty(message)){
+                        if (TextUtilsJava.isEmpty(message)){
                             result.setResultMessage(message);
                         }
                         else{
@@ -72,7 +79,6 @@ public class DeleteAccountTask extends APIUserRequestTask{
             }
         }
         catch (IOException e) {
-            Analytics.logException(e);
             Log.d(TAG, "IO exception", e);
             result.setSuccess(false);
             result.setResultMessage(ctx.getString(R.string.error_connection));
@@ -81,4 +87,24 @@ public class DeleteAccountTask extends APIUserRequestTask{
         return result;
     }
 
+    @Override
+    protected void onPostExecute(BasicResult result) {
+        synchronized (this) {
+            if (responseListener != null) {
+
+                if (result.isSuccess()) {
+                    responseListener.onSuccess();
+                } else {
+                    responseListener.onError(result.getResultMessage());
+                }
+
+            }
+        }
+    }
+
+    public void setResponseListener(ResponseListener srl) {
+        synchronized (this) {
+            responseListener = srl;
+        }
+    }
 }

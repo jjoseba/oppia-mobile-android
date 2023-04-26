@@ -59,29 +59,45 @@ public class FeedbackWidget extends AnswerWidget {
 
 	@Override
 	int getContentAvailability(boolean afterAttempt) {
-		// Feedback widget always available?
-		return QUIZ_AVAILABLE;
+		if (afterAttempt){
+			// In the case we just submitted the feedback, we set the value as available
+			// to avoid showing the retake message
+			return QUIZ_AVAILABLE;
+		}
+		else if (isUserOverLimitedAttempts(afterAttempt)){
+			return R.string.widget_feedback_unavailable_attempts;
+		}
+		else{
+			return QUIZ_AVAILABLE;
+		}
+
 	}
 
 	@Override
-	void showContentUnavailableRationale(int unavailabilityReasonStringResId) {
-		// Always available, so no need to show any kind of message
+	String getAnswerWidgetType() {
+		return getString(R.string.feedback);
 	}
 
 	@Override
 	boolean shouldShowInitialInfo() {
-		return false;
+		return quiz.isPasswordProtected();
 	}
 
 	@Override
 	void loadInitialInfo(ViewGroup infoContainer) {
-		// Don't need to show anything specific
+		// Only in the case of password protection
+		checkPasswordProtectionAndShowQuestion();
 	}
 
 	@Override
 	void showResultsInfo() {
+		String feedbackMessage = this.quiz.getFeedbackMessageBasedOnQuizGrade(this.getPercentScore());
 		TextView title = getView().findViewById(R.id.quiz_results_score);
-		title.setText(R.string.widget_feedback_submit_title);
+		if(feedbackMessage != null && !feedbackMessage.isEmpty()) {
+			title.setText(feedbackMessage);
+		} else {
+			title.setText(R.string.widget_feedback_submit_title);
+		}
 	}
 
 	@Override
@@ -109,7 +125,7 @@ public class FeedbackWidget extends AnswerWidget {
 		ArrayList<QuizAnswerFeedback> quizAnswersFeedback = new ArrayList<>();
 		List<QuizQuestion> questions = this.quiz.getQuestions();
 		for(QuizQuestion q: questions){
-			if(!(q instanceof Description)){
+			if(!(q instanceof Description) && !q.isSkipped()){
 				QuizAnswerFeedback qf = new QuizAnswerFeedback();
 				qf.setIsSurvey(true);
 				qf.setScore(100);

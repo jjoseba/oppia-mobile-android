@@ -1,57 +1,17 @@
-plugins {
-    id "org.sonarqube" version "2.8"
-}
+import com.android.build.api.dsl.ManagedVirtualDevice
 
 apply plugin: 'com.android.application'
-apply plugin: "com.hiya.jacoco-android"
+apply from: '../jacoco.gradle'
+apply from: '../sonarqube.gradle'
 
 repositories {
-    maven { url "https://mint.splunk.com/gradle/" }
     maven { url "https://jitpack.io" }
 }
 
-def version_code = 92
-def version_name = "7.3.3"
+def version_code = 108
+def version_name = "7.4.3"
 
 android {
-    compileSdkVersion 30
-
-    defaultConfig {
-        versionCode version_code
-        versionName version_name
-
-        applicationId "org.digitalcampus.mobile.learning"
-
-        minSdkVersion 21
-        targetSdkVersion 30
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        // The following argument makes the Android Test Orchestrator run its
-        // "pm clear" command after each test invocation. This command ensures
-        // that the app's state is completely cleared between tests.
-        testInstrumentationRunnerArguments clearPackageData: 'true'
-
-        vectorDrawables.useSupportLibrary = true
-    }
-
-    packagingOptions {
-        exclude 'META-INF/LICENSE.txt'
-        exclude 'META-INF/NOTICE.txt'
-        exclude 'README.md'
-    }
-
-    lintOptions {
-        checkReleaseBuilds true
-        // Disable checks for String translations
-        disable 'MissingTranslation', 'ExtraTranslation'
-    }
-
-    // Configure to use Java8 features like try-with-resources
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
 
     Properties runtimeProps = new Properties()
     runtimeProps.load(new FileInputStream(rootProject.file('oppia-default.properties')))
@@ -62,6 +22,57 @@ android {
         runtimeProps.load(new FileInputStream(oppiaPropsFile))
     } else {
         logger.error('No properties file found. Using default values.')
+    }
+
+    compileSdk 33
+
+    defaultConfig {
+        versionCode version_code
+        versionName version_name
+
+        applicationId "org.digitalcampus.mobile.learning"
+
+        minSdk 21
+        targetSdk 33
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // The following argument makes the Android Test Orchestrator run its
+        // "pm clear" command after each test invocation. This command ensures
+        // that the app's state is completely cleared between tests.
+        testInstrumentationRunnerArguments clearPackageData: 'true'
+        testInstrumentationRunnerArguments coverage: 'true'
+        testInstrumentationRunnerArguments useTestStorageService: 'true'
+
+        vectorDrawables.useSupportLibrary = true
+
+        def interfaceLangs = runtimeProps.getProperty('INTERFACE_LANGUAGE_OPTIONS').split(",")
+        resConfigs interfaceLangs
+// Language region format in android resources requires 'r' char
+        interfaceLangs.eachWithIndex { lang, index -> interfaceLangs[index] = lang.replace("-", "-r")}
+        //        resConfigs "en", "es", "ar", "fi", "fr", "hi", "ur-rPK", "am-rET", "om-rET"
+
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/LICENSE.txt', 'META-INF/NOTICE.txt', 'README.md']
+        }
+    }
+
+    lint {
+        checkReleaseBuilds true
+        // Disable checks for String translations
+        disable 'MissingTranslation', 'ExtraTranslation'
+    }
+
+    compileOptions {
+
+        // Configure to use Java8 features like try-with-resources, lambdas...
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+
+        // Flag to enable support for the new language Java 8+ APIs: time, functional, concurrent...
+        coreLibraryDesugaringEnabled true
     }
 
     buildTypes {
@@ -80,7 +91,6 @@ android {
 
             buildConfigField "String", "ANALYTICS_LIBRARY", "\"" + analyticsLibrary + "\""
             buildConfigField "String", "COUNTLY_APP_KEY", "\"" + runtimeProps.getProperty('COUNTLY_APP_KEY','') + "\""
-            buildConfigField "String", "MINT_API_KEY", "\"" + runtimeProps.getProperty('MINT_API_KEY','') + "\""
             buildConfigField "String", "COUNTLY_SERVER_URL", "\"" + runtimeProps.getProperty('COUNTLY_SERVER_URL','') + "\""
 
             buildConfigField "boolean", "ADMIN_PROTECT_SETTINGS", runtimeProps['ADMIN_PROTECT_SETTINGS']
@@ -93,7 +103,7 @@ android {
             buildConfigField "boolean", "ADMIN_PROTECT_COURSE_RESET", runtimeProps['ADMIN_PROTECT_COURSE_RESET']
             buildConfigField "boolean", "ADMIN_PROTECT_COURSE_INSTALL", runtimeProps['ADMIN_PROTECT_COURSE_INSTALL']
             buildConfigField "boolean", "ADMIN_PROTECT_COURSE_UPDATE", runtimeProps['ADMIN_PROTECT_COURSE_UPDATE']
-            
+
             buildConfigField "boolean", "ADMIN_PROTECT_NOTIFICATIONS", runtimeProps['ADMIN_PROTECT_NOTIFICATIONS']
             buildConfigField "boolean", "ADMIN_PROTECT_ENABLE_REMINDER_NOTIFICATIONS", runtimeProps['ADMIN_PROTECT_ENABLE_REMINDER_NOTIFICATIONS']
             buildConfigField "boolean", "ADMIN_PROTECT_REMINDER_INTERVAL", runtimeProps['ADMIN_PROTECT_REMINDER_INTERVAL']
@@ -143,8 +153,9 @@ android {
             buildConfigField "String", "DEFAULT_REMINDER_DAYS", "\"" + runtimeProps['DEFAULT_REMINDER_DAYS'] + "\""
 
             buildConfigField "boolean", "SHOW_GAMIFICATION_EVENTS", runtimeProps['SHOW_GAMIFICATION_EVENTS']
+            buildConfigField "boolean", "ALLOW_REGISTER_USER", runtimeProps['ALLOW_REGISTER_USER']
 
-
+            buildConfigField "String", "INTERFACE_LANGUAGE_OPTIONS", "\"" + runtimeProps['INTERFACE_LANGUAGE_OPTIONS'] + "\""
 
             resValue "string", "MENU_ALLOW_LOGOUT_DEFAULT_VALUE", runtimeProps['MENU_ALLOW_LOGOUT']
             resValue "string", "MENU_ALLOW_COURSE_DOWNLOAD_DEFAULT_VALUE", runtimeProps['MENU_ALLOW_COURSE_DOWNLOAD']
@@ -161,6 +172,7 @@ android {
             resValue "string", "prefCoursesReminderTimeDefault", runtimeProps['DEFAULT_REMINDER_TIME']
             resValue "string", "prefCoursesReminderDaysDefaultSerialized", runtimeProps['DEFAULT_REMINDER_DAYS']
             resValue "string", "prefShowGamificationEventsDefault", runtimeProps['SHOW_GAMIFICATION_EVENTS']
+            resValue "string", "prefUpdateActivityOnLoginDefault", runtimeProps['UPDATE_ACTIVITY_ON_LOGIN']
 
         }
 
@@ -189,6 +201,42 @@ android {
                 jacoco.excludes = ['jdk.internal.*']
             }
         }
+
+        managedDevices {
+            devices {
+                pixel2api30 (ManagedVirtualDevice) {
+                    // Use device profiles you typically see in Android Studio.
+                    device = "Pixel 2"
+                    // ATDs currently support only API level 30.
+                    apiLevel = 30
+                    // You can also specify "google-atd" if you require Google Play Services.
+                    systemImageSource = "aosp"
+                }
+
+                nexusSapi28 (ManagedVirtualDevice) {
+                    device = "Nexus S"
+                    apiLevel = 28
+                    systemImageSource = "aosp"
+                }
+
+                nexus5api33 (ManagedVirtualDevice) {
+                    device = "Nexus 5"
+                    apiLevel = 33
+                    systemImageSource = "google"
+                }
+            }
+
+
+            groups {
+                phones {
+                    targetDevices.add(devices.nexus5api33)
+                    targetDevices.add(devices.pixel2api30)
+                    targetDevices.add(devices.nexusSapi28)
+                }
+            }
+
+        }
+
     }
 
     flavorDimensions "main"
@@ -198,56 +246,55 @@ android {
     }
 
     useLibrary 'android.test.mock'
+    namespace 'org.digitalcampus.mobile.learning'
 
     android.buildFeatures.viewBinding = true
 }
 
-// Setup Jacoco version. It's recommended way to exclude conflicts between components
-jacoco {
-    toolVersion = "0.8.3"
-}
-
-
 dependencies {
-    def workVersion = '2.5.0'
+    def workVersion = '2.7.1'
     def roomVersion = "1.1.1"
-    def fragmentVersion = '1.2.5'
-    def daggerVersion = '2.27'
+    def fragmentVersion = '1.5.4'
+    def daggerVersion = '2.41'
+    def appcompatVersion = '1.6.0-rc01'
+    def espressoVersion = '3.5.1'
 
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'joda-time:joda-time:2.3'
-    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'joda-time:joda-time:2.10.13'
+    implementation 'com.google.android.material:material:1.7.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
 
-    implementation 'androidx.core:core:1.3.2'
+    implementation 'androidx.core:core:1.9.0'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.preference:preference:1.2.0'
+
+    implementation "androidx.appcompat:appcompat:$appcompatVersion"
+
     implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
-    implementation 'androidx.navigation:navigation-fragment:2.3.4'
-    implementation 'androidx.navigation:navigation-ui:2.3.4'
+    implementation 'androidx.navigation:navigation-fragment:2.5.3'
+    implementation 'androidx.navigation:navigation-ui:2.5.3'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.concurrent:concurrent-futures:1.1.0'
     implementation "android.arch.persistence.room:runtime:$roomVersion"
     implementation "androidx.work:work-runtime:$workVersion"
+    implementation 'com.google.guava:guava:31.1-android'
 
     androidTestImplementation "androidx.work:work-testing:$workVersion"
     annotationProcessor "android.arch.persistence.room:compiler:$roomVersion"
 
     implementation 'javax.xml.stream:stax-api:1.0'
     implementation 'com.squareup.picasso:picasso:2.71828'
-    implementation 'com.squareup.okhttp3:okhttp:4.4.0'
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.4.0'
-    implementation 'com.splunk.mint:mint:5.0.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3'
     implementation 'ly.count.android:sdk:20.11.8'
     implementation 'io.github.inflationx:calligraphy3:3.1.1'
     implementation 'io.github.inflationx:viewpump:2.0.3'
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
     implementation 'com.mikhaellopez:circularprogressbar:3.1.0'
     implementation 'com.github.badoualy:stepper-indicator:1.0.7'
-    implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'com.hbb20:ccp:2.5.1' //Phone code picker
+    implementation 'com.google.code.gson:gson:2.9.0'
+    implementation 'com.hbb20:ccp:2.6.0' //Phone code picker
 
     //Dagger Dependencies
     implementation "com.google.dagger:dagger:$daggerVersion"
@@ -257,21 +304,26 @@ dependencies {
     annotationProcessor "com.google.dagger:dagger-compiler:$daggerVersion"
     androidTestImplementation 'com.github.fabioCollini.daggermock:daggermock:0.8.5'
 
-    implementation "com.squareup.inject:assisted-inject-annotations-dagger2:0.3.3"
+    implementation "com.squareup.inject:assisted-inject-annotations-dagger2:0.8.1"
 
     //JUnit Dependencies
-    testImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'com.squareup.okhttp3:mockwebserver:4.4.0'
-    androidTestImplementation 'androidx.test:runner:1.3.0'
-    androidTestImplementation 'androidx.test:rules:1.3.0'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.annotation:annotation:1.1.0'
+    testImplementation 'androidx.test.ext:junit:1.1.5'
+    testImplementation "org.json:json:20220924"
+
+    androidTestImplementation 'com.squareup.okhttp3:mockwebserver:4.9.3'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.annotation:annotation:1.3.0'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
-    androidTestUtil 'androidx.test:orchestrator:1.3.0'
+    androidTestUtil 'androidx.test:orchestrator:1.4.2'
+    androidTestUtil 'androidx.test.services:test-services:1.4.2'
 
     //Espresso Dependencies
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-    androidTestImplementation('androidx.test.espresso:espresso-contrib:3.3.0') {
+    androidTestImplementation "androidx.test.espresso:espresso-core:$espressoVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-web:$espressoVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-intents:$espressoVersion"
+    androidTestImplementation("androidx.test.espresso:espresso-contrib:$espressoVersion") {
         exclude module: 'support-annotations'
         exclude module: 'support-v4'
         exclude module: 'support-v13'
@@ -281,21 +333,21 @@ dependencies {
 
     // Fragment testing
     implementation "androidx.fragment:fragment:$fragmentVersion"
-    debugImplementation("androidx.fragment:fragment-testing:$fragmentVersion") {
-        // exclude androidx.test:core while fragment_testing depends on 1.1.0
-        exclude group: 'androidx.test', module: 'core'
-    }
+    debugImplementation 'androidx.test:core:1.5.0'
+    debugImplementation "androidx.fragment:fragment-testing:1.5.4"
 
     //Mockito Dependencies
-    testImplementation 'org.mockito:mockito-core:2.4.0'
+    testImplementation 'org.mockito:mockito-core:4.3.1'
+
+    // Awaitility
+    androidTestImplementation 'org.awaitility:awaitility:4.2.0'
 
     def multidex_version = "2.0.1"
     implementation "androidx.multidex:multidex:$multidex_version"
     androidTestImplementation 'com.google.dexmaker:dexmaker:1.2'
     androidTestImplementation 'com.google.dexmaker:dexmaker-mockito:1.2'
 
-
-//    debugImplementation 'im.dino:dbinspector:3.4.1@aar'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
 
 }
 
@@ -312,6 +364,8 @@ task grantPermissions(type: Exec, dependsOn: 'installNormalDebug') {
     }
 
     commandLine "${adb} shell pm grant ${android.defaultConfig.applicationId} android.permission.SET_ANIMATION_SCALE".split(' ')
+    commandLine "${adb} shell pm grant ${android.defaultConfig.applicationId} android.permission.SET_ANIMATION_SCALE".split(' ')
+
 }
 
 tasks.whenTaskAdded { task ->
@@ -322,35 +376,3 @@ tasks.whenTaskAdded { task ->
         task.dependsOn grantPermissions
     }
 }
-
-sonarqube {
-    properties {
-        property "sonar.projectVersion", android.defaultConfig.versionName
-        property "sonar.projectName", "Oppia Core app"
-        property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.sources", "src/main/java"
-        property "sonar.binaries", "build/intermediates/app_classes/normalDebug"
-        property "sonar.java.binaries", "build/intermediates/app_classes/normalDebug"
-        property "sonar.tests", "src/test/java, src/androidTest/java"
-        property "sonar.java.test.binaries", "build/intermediates/app_classes/normalDebug"
-        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/coverage/normal/debug/report.xml"
-        property "sonar.exclusions", "app/src/test/java/**/*, app/src/androidTest/java/**/*, " +
-                "src/test/java/**/*, src/androidTest/**/*, src/test/java, src/androidTest/java"
-        property "sonar.test.exclusions", "app/src/test/java/**/*, app/src/androidTest/java/**/*, " +
-                "src/test/java/**/*, src/androidTest/**/*, src/test/java, src/androidTest/java"
-        property "sonar.coverage.exclusions", "app/src/test/java/**/*, app/src/androidTest/java/**/*, " +
-                "src/test/java/**/*, src/androidTest/**/*, src/test/java, src/androidTest/java"
-
-        def sonarqubePropsFile = rootProject.file('sonarqube.properties')
-        if (sonarqubePropsFile.canRead()) {
-            def sonarqubeProps = new Properties()
-            sonarqubeProps.load(new FileInputStream(sonarqubePropsFile))
-
-            property "sonar.projectKey", sonarqubeProps["sonar.projectKey"]
-            property "sonar.organization", sonarqubeProps["sonar.organization"]
-            property "sonar.login", sonarqubeProps["sonar.login"]
-        }
-    }
-}
-tasks.sonarqube.dependsOn connectedCheck
-tasks.sonarqube.dependsOn jacocoTestReport

@@ -9,17 +9,12 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.ImageButton;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.tabs.TabLayout;
@@ -39,6 +34,7 @@ import org.digitalcampus.oppia.task.ExportActivityTask;
 import org.digitalcampus.oppia.task.FetchCourseTransferableFilesTask;
 import org.digitalcampus.oppia.task.InstallDownloadedCoursesTask;
 import org.digitalcampus.oppia.task.result.BasicResult;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.storage.FileUtils;
 
 import java.lang.ref.WeakReference;
@@ -135,11 +131,15 @@ public class SyncActivity extends AppActivity implements InstallCourseListener, 
         binding.sendAllButton.setOnClickListener(v -> sendAll());
 
         ExportActivityTask task = new ExportActivityTask(this);
-        task.setListener(filename -> {
+        task.setListener(result -> {
             updateStatus(true);
             refreshFileList(false);
+
+            if (!result.isSuccess()) {
+                toast(result.getResultMessage());
+            }
         });
-        task.execute();
+        task.execute(ExportActivityTask.UNEXPORTED_ACTIVITY);
         binding.sendTransferProgress.setVisibility(View.VISIBLE);
 
     }
@@ -418,7 +418,7 @@ public class SyncActivity extends AppActivity implements InstallCourseListener, 
         if ((isReceiving) || (file.getType().equals(CourseTransferableFile.TYPE_ACTIVITY_LOG))){
             Log.d(TAG, "Complete!");
             String title = file.getNotificationName();
-            if ((file.getFile() == null) && !TextUtils.isEmpty(title)){
+            if ((file.getFile() == null) && !TextUtilsJava.isEmpty(title)){
                 Toast.makeText(this, getString(R.string.bluetooth_transfer_complete, title), Toast.LENGTH_LONG).show();
             }
         }

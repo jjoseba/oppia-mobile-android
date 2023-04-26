@@ -18,7 +18,6 @@
 package org.digitalcampus.oppia.activity;
 
 
-import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -31,11 +30,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
-import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityDeviceListBinding;
@@ -47,7 +44,6 @@ import org.digitalcampus.oppia.service.bluetooth.BluetoothTransferService;
 import org.digitalcampus.oppia.utils.UIUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -62,11 +58,6 @@ public class DeviceListActivity extends Activity implements BluetoothBroadcastRe
     private static final String TAG = "DeviceListActivity";
 
     public static final String EXTRA_DEVICE_ADDRESS = "device_address";
-    private static final List<String> BLUETOOTH_PERMISSIONS = Arrays.asList(
-            //Remember to update this when the Manifest permissions change!
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-    );
 
     private BluetoothBroadcastReceiver receiver;
     private BluetoothAdapter mBtAdapter;
@@ -88,7 +79,8 @@ public class DeviceListActivity extends Activity implements BluetoothBroadcastRe
 
         // Initialize the button to perform device discovery
         binding.buttonScan.setOnClickListener(v -> {
-            final List<String> notGrantedPerms = PermissionsManager.filterNotGrantedPermissions(DeviceListActivity.this, BLUETOOTH_PERMISSIONS);
+            final List<String> notGrantedPerms = PermissionsManager.filterNotGrantedPermissions(
+                    DeviceListActivity.this, PermissionsManager.BLUETOOTH_PERMISSIONS_REQUIRED);
             if (!notGrantedPerms.isEmpty()) {
                 if (PermissionsManager.canAskForAllPermissions(DeviceListActivity.this, notGrantedPerms)) {
                     UIUtils.showAlert(

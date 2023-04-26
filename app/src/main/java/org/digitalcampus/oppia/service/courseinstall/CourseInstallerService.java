@@ -52,6 +52,8 @@ public class CourseInstallerService extends FileIntentService {
     public static final String SERVICE_SHORTNAME = "shortname"; //field for providing Course shortname
     public static final String SERVICE_VERSIONID = "versionid"; //field for providing file URL
     public static final String SERVICE_MESSAGE = "message";
+    public static final String SERVICE_RESTRICTED = "restricted";
+    public static final String SERVICE_COHORTS = "cohorts";
 
     public static final String ACTION_INSTALL = "install";
 
@@ -119,6 +121,8 @@ public class CourseInstallerService extends FileIntentService {
         if (intent.getStringExtra(SERVICE_ACTION).equals(ACTION_DOWNLOAD)){
             final String fileUrl = intent.getStringExtra(SERVICE_URL);
             final String shortname = intent.getStringExtra(SERVICE_SHORTNAME);
+            final boolean isRestricted = intent.getBooleanExtra(SERVICE_RESTRICTED, false);
+            final List<Integer> cohorts = intent.getIntegerArrayListExtra(SERVICE_COHORTS);
             Double versionID = intent.getDoubleExtra(SERVICE_VERSIONID, 0);
             String filename = Course.getLocalFilename(shortname, versionID);
 
@@ -131,7 +135,7 @@ public class CourseInstallerService extends FileIntentService {
             }
             boolean success = downloadCourseFile(fileUrl, shortname, versionID);
             if (success){
-                CourseInstall.installDownloadedCourse(this, filename, shortname, new CourseInstall.CourseInstallingListener() {
+                CourseInstall.installDownloadedCourse(this, filename, shortname, isRestricted, cohorts, new CourseInstall.CourseInstallingListener() {
                     @Override
                     public void onInstallProgress(int progress) {
                         sendBroadcast(fileUrl, ACTION_INSTALL, ""+progress);
@@ -183,8 +187,8 @@ public class CourseInstallerService extends FileIntentService {
             Response response = client.newCall(request).execute();
 
             long fileLength = response.body().contentLength();
-            Log.d(TAG, "Content-length: " + fileLength);
             long availableStorage = Storage.getAvailableStorageSize(this);
+            Log.d(TAG, "sizes: Content-length: " + fileLength + ". available storage: " + availableStorage);
 
             if (fileLength >= availableStorage){
                 sendBroadcast(fileUrl, ACTION_FAILED, this.getString(R.string.error_insufficient_storage_available));

@@ -3,7 +3,6 @@ package org.digitalcampus.oppia.utils.ui.fields;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.EditText;
@@ -11,16 +10,16 @@ import android.widget.EditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import org.digitalcampus.mobile.learning.R;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import androidx.core.text.HtmlCompat;
 
 public class ValidableTextInputLayout extends TextInputLayout implements ValidableField, View.OnFocusChangeListener {
 
-    private static final String REQUIRED_SPANNED_HINT = "<string>%s <span style=\"color:red;\">*</span></string>";
-
     private boolean required = false;
     private boolean cantContainSpaces = false;
     private CustomValidator validator;
+    private boolean asteriskAdded;
 
     public ValidableTextInputLayout(Context context) {
         super(context);
@@ -50,6 +49,7 @@ public class ValidableTextInputLayout extends TextInputLayout implements Validab
         initialize();
     }
 
+    @Override
     public void setRequired(boolean required){
         if (!this.required && required){
             setRequiredHint();
@@ -58,9 +58,12 @@ public class ValidableTextInputLayout extends TextInputLayout implements Validab
     }
 
     private void setRequiredHint(){
-        String html = String.format(REQUIRED_SPANNED_HINT, this.getHint());
-        Spanned requiredHint = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY);
-        this.setHint(requiredHint);
+        if (!asteriskAdded) {
+            String html = String.format(REQUIRED_SPANNED_HINT, this.getHint());
+            Spanned requiredHint = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY);
+            this.setHint(requiredHint);
+            asteriskAdded = true;
+        }
     }
 
     public void initialize(){
@@ -68,7 +71,7 @@ public class ValidableTextInputLayout extends TextInputLayout implements Validab
             setRequiredHint();
         }
 
-        if (!TextUtils.isEmpty(getHelperText())){
+        if (!TextUtilsJava.isEmpty(getHelperText())){
             // We add some additional bottom margin
             LayoutParams params = (LayoutParams) getLayoutParams();
             if (params != null){
@@ -152,7 +155,7 @@ public class ValidableTextInputLayout extends TextInputLayout implements Validab
     private void setEditTextSelected(){
         EditText input = getEditText();
         if (input != null){
-            boolean selected = !TextUtils.isEmpty(input.getText().toString());
+            boolean selected = !TextUtilsJava.isEmpty(input.getText().toString());
             this.setSelected(selected);
         }
     }

@@ -6,7 +6,6 @@ import android.graphics.Typeface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -45,7 +44,7 @@ public class TagsAdapter extends RecyclerView.Adapter<TagsAdapter.TagsViewHolder
         final Tag t = getItemAtPosition(position);
 
         viewHolder.binding.tagName.setText(t.getName());
-        viewHolder.binding.tagCount.setText(String.valueOf(t.getCount()));
+        viewHolder.binding.tagCount.setText(String.valueOf(t.getCountAvailable()));
         if(t.isHighlight()){
             viewHolder.binding.tagName.setTypeface(null, Typeface.BOLD);
         } else {

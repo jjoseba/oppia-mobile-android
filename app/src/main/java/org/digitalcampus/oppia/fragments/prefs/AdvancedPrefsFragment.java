@@ -7,29 +7,39 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.util.Patterns;
 import android.webkit.URLUtil;
 
-import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.oppia.activity.PrefsActivity;
-import org.digitalcampus.oppia.api.RemoteApiEndpoint;
-import org.digitalcampus.oppia.application.AdminSecurityManager;
-import org.digitalcampus.oppia.application.App;
-import org.digitalcampus.oppia.application.SessionManager;
-import org.digitalcampus.oppia.utils.UIUtils;
-import org.digitalcampus.oppia.utils.storage.StorageLocationInfo;
-import org.digitalcampus.oppia.utils.storage.StorageUtils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
+
+import org.digitalcampus.mobile.learning.R;
+import org.digitalcampus.oppia.activity.AppActivity;
+import org.digitalcampus.oppia.activity.PrefsActivity;
+import org.digitalcampus.oppia.api.ApiEndpoint;
+import org.digitalcampus.oppia.api.RemoteApiEndpoint;
+import org.digitalcampus.oppia.application.App;
+import org.digitalcampus.oppia.application.SessionManager;
+import org.digitalcampus.oppia.database.DbHelper;
+import org.digitalcampus.oppia.exception.UserNotFoundException;
+import org.digitalcampus.oppia.model.User;
+import org.digitalcampus.oppia.task.ExportActivityTask;
+import org.digitalcampus.oppia.task.FetchUserTask;
+import org.digitalcampus.oppia.utils.ConnectionUtils;
+import org.digitalcampus.oppia.utils.CourseUtils;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
+import org.digitalcampus.oppia.utils.UIUtils;
+import org.digitalcampus.oppia.utils.resources.ExternalResourceOpener;
+import org.digitalcampus.oppia.utils.storage.Storage;
+import org.digitalcampus.oppia.utils.storage.StorageLocationInfo;
+import org.digitalcampus.oppia.utils.storage.StorageUtils;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -39,9 +49,12 @@ public class AdvancedPrefsFragment extends BasePreferenceFragment implements Pre
     private ListPreference storagePref;
     private EditTextPreference serverPref;
     private EditTextPreference usernamePref;
+    private ListPreference updateActivityOnLoginPref;
 
     @Inject
     SharedPreferences prefs;
+    @Inject
+    ApiEndpoint apiEndpoint;
 
     public static AdvancedPrefsFragment newInstance() {
         return new AdvancedPrefsFragment();
@@ -75,6 +88,7 @@ public class AdvancedPrefsFragment extends BasePreferenceFragment implements Pre
         storagePref = findPreference(PrefsActivity.PREF_STORAGE_OPTION);
         serverPref = findPreference(PrefsActivity.PREF_SERVER);
         usernamePref = findPreference(PrefsActivity.PREF_USER_NAME);
+        updateActivityOnLoginPref = findPreference(PrefsActivity.PREF_UPDATE_ACTIVITY_ON_LOGIN);
 
         if (serverPref == null || storagePref == null) {
             return;
@@ -85,7 +99,7 @@ public class AdvancedPrefsFragment extends BasePreferenceFragment implements Pre
         liveUpdateSummary(PrefsActivity.PREF_STORAGE_OPTION);
         liveUpdateSummary(PrefsActivity.PREF_SERVER_TIMEOUT_CONN, " ms");
         liveUpdateSummary(PrefsActivity.PREF_SERVER_TIMEOUT_RESP, " ms");
-        usernamePref.setSummary("".equals(usernamePref.getText()) ?
+        usernamePref.setSummary(TextUtilsJava.isEmpty(usernamePref.getText()) ?
                 getString(R.string.about_not_logged_in) :
                 getString(R.string.about_logged_in, usernamePref.getText()));
 
@@ -95,11 +109,121 @@ public class AdvancedPrefsFragment extends BasePreferenceFragment implements Pre
                 return false;
             }
 
-            showWarningIfLoggedIn((String) newValue);
+            String currentValue = prefs.getString(preference.getKey(), getString(R.string.prefServerDefault));
+            if (checkMustShowWarningLogout(preference.getKey(), currentValue, (String) newValue)) {
+                showApiKeyWarning(() -> App.getPrefs(getActivity()).edit().putString(PrefsActivity.PREF_SERVER, currentValue).apply());
+            }
 
             return true;
         });
 
+        updateActivityOnLoginPref.setOnPreferenceChangeListener((preference, newValue) -> {
+            boolean mustUpdate = onPreferenceChangedDelegate(preference, newValue);
+            if (!mustUpdate) {
+                return false;
+            }
+
+            String currentValue = prefs.getString(preference.getKey(), getString(R.string.prefUpdateActivityOnLoginDefault));
+            if (checkMustShowWarningLogout(preference.getKey(), currentValue, (String) newValue)) {
+                showWarningLogout(() -> ((ListPreference) preference).setValue(currentValue));
+            }
+
+            return true;
+        });
+
+        findPreference(PrefsActivity.PREF_FULL_ACTIVITY_EXPORT).setOnPreferenceClickListener(preference -> {
+            showCreateExportDataDialog();
+            return true;
+        });
+
+        findPreference(PrefsActivity.PREF_FLUSH_APP_CACHE).setOnPreferenceClickListener(preference -> {
+            flushAppCache();
+            return true;
+        });
+
+    }
+
+    private boolean checkMustShowWarningLogout(String key, String currentValue, String newValue) {
+
+        switch (key) {
+            case PrefsActivity.PREF_SERVER:
+                boolean allApiKeysInvalid = SessionManager.areAllApiKeysInvalid(getContext());
+                //If all API keys are already invalidated, we don't need to show the warning
+                return !TextUtilsJava.equals(currentValue, newValue) &&
+                        (isLoggedIn() || !allApiKeysInvalid);
+
+            case PrefsActivity.PREF_UPDATE_ACTIVITY_ON_LOGIN:
+                if (!isLoggedIn()) {
+                    return false;
+                }
+                boolean currentIsNone = TextUtilsJava.equals(getString(R.string.update_activity_on_login_value_none), currentValue);
+                boolean newIsOptionalOrForce = TextUtilsJava.equals(getString(R.string.update_activity_on_login_value_optional), newValue)
+                        || TextUtilsJava.equals(getString(R.string.update_activity_on_login_value_force), newValue);
+                return currentIsNone && newIsOptionalOrForce;
+
+            default:
+                return false;
+        }
+
+    }
+
+    private void flushAppCache() {
+        flushCourseListingCache();
+        flushUserProfileInfo();
+
+        ((AppActivity) getActivity()).toast(R.string.cache_flushed_successfuly);
+    }
+
+    private void flushCourseListingCache() {
+        prefs.edit()
+                .remove(PrefsActivity.PREF_LAST_COURSES_CHECKS_SUCCESSFUL_TIME)
+                .remove(PrefsActivity.PREF_SERVER_COURSES_CACHE)
+                .commit();
+
+        if (ConnectionUtils.isNetworkConnected(getActivity())) {
+            CourseUtils.updateCourseCache(getActivity(), prefs, apiEndpoint);
+        }
+    }
+
+    private void flushUserProfileInfo() {
+        try {
+            User user = DbHelper.getInstance(getContext()).getUser(SessionManager.getUsername(getContext()));
+            new FetchUserTask().updateLoggedUserProfile(getContext(), apiEndpoint, user);
+        } catch (UserNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showCreateExportDataDialog() {
+
+        getAppActivity().showProgressDialog(getString(R.string.loading));
+
+        ExportActivityTask task = new ExportActivityTask(getActivity());
+        task.setListener(result -> {
+            getAppActivity().hideProgressDialog();
+            if (result.isSuccess()) {
+                showFullExportShareDialog(result.getResultMessage());
+            } else {
+                getAppActivity().alert(result.getResultMessage());
+            }
+        });
+        task.execute(ExportActivityTask.FULL_EXPORT_ACTIVTY);
+    }
+
+    private void showFullExportShareDialog(String filename) {
+
+        final File fileToShare = new File(Storage.getActivityFullExportPath(getActivity()), filename);
+        new AlertDialog.Builder(getActivity())
+                .setMessage(getString(R.string.full_activity_exported_success)
+                        + getString(R.string.full_activity_export_path, fileToShare.getPath()))
+                .setPositiveButton(R.string.share, (dialog, which) ->
+                        ExternalResourceOpener.shareFile(getActivity(), fileToShare, "text/json"))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private AppActivity getAppActivity() {
+        return ((AppActivity) getActivity());
     }
 
     @Override
@@ -125,36 +249,58 @@ public class AdvancedPrefsFragment extends BasePreferenceFragment implements Pre
         return super.onPreferenceChangedDelegate(preference, newValue);
     }
 
-    protected void showWarningIfLoggedIn(String newValue){
-        if (isLoggedIn()) {
-            String currentUrl = App.getPrefs(getActivity()).getString(PrefsActivity.PREF_SERVER, null);
-            String newUrl = newValue.trim();
-            if (!TextUtils.equals(currentUrl, newUrl)) {
-                showWarningLogout(currentUrl, newUrl);
-            }
-        }
-    }
+//    protected void showWarningIfLoggedIn(String newValue) {
+//        if (isLoggedIn()) {
+//            String currentUrl = App.getPrefs(getActivity()).getString(PrefsActivity.PREF_SERVER, null);
+//            String newUrl = newValue.trim();
+//            if (!TextUtilsJava.equals(currentUrl, newUrl)) {
+//                showWarningLogout(() -> App.getPrefs(getActivity()).edit().putString(PrefsActivity.PREF_SERVER, currentUrl).apply());
+//            }
+//        }
+//    }
 
     private boolean isLoggedIn() {
-        return !TextUtils.isEmpty(prefs.getString(PrefsActivity.PREF_USER_NAME, ""));
+        return !TextUtilsJava.isEmpty(prefs.getString(PrefsActivity.PREF_USER_NAME, ""));
     }
 
-    private void showWarningLogout(String currentUrl, String newUrl) {
+    private void showWarningLogout(Runnable restoreValueRunnable) {
         new AlertDialog.Builder(getActivity())
                 .setTitle(R.string.warning)
-                .setMessage(R.string.change_server_logout_warning)
-                .setPositiveButton(R.string.accept, (dialog, which) -> {
-                    SessionManager.invalidateCurrentUserApiKey(getContext());
-                    SessionManager.logoutCurrentUser(getActivity());
-                    clearNotificationProcessCachedData();
-                    usernamePref.setSummary(R.string.about_not_logged_in);
-                    ((PrefsActivity)getActivity()).forzeGoToLoginScreen();
-                    App.getPrefs(getActivity()).edit().putString(PrefsActivity.PREF_SERVER, newUrl).apply();
-                })
-                .setNegativeButton(R.string.cancel, (dialog, which) ->{
-                    App.getPrefs(getActivity()).edit().putString(PrefsActivity.PREF_SERVER, currentUrl).apply();
+                .setMessage(R.string.change_setting_logout_warning)
+                .setPositiveButton(R.string.accept, (dialog, which) -> launchLogoutTasks())
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {
+                    if (restoreValueRunnable != null) restoreValueRunnable.run();
                 })
                 .show();
+    }
+
+    private void showApiKeyWarning(Runnable restoreValueRunnable) {
+
+        String message = getString(R.string.change_setting_apikey_warning);
+        if (isLoggedIn()){
+            message += "\n\n" + getString(R.string.change_setting_logout_warning);
+        }
+
+        new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.warning)
+                .setMessage(message)
+                .setPositiveButton(R.string.accept, (dialog, which) -> {
+                    SessionManager.invalidateAllApiKeys(getContext());
+                    launchLogoutTasks();
+                })
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {
+                    if (restoreValueRunnable != null) restoreValueRunnable.run();
+                })
+                .show();
+    }
+
+    private void launchLogoutTasks() {
+
+        SessionManager.invalidateCurrentUserApiKey(getContext());
+        SessionManager.logoutCurrentUser(getActivity());
+        clearNotificationProcessCachedData();
+        usernamePref.setSummary(R.string.about_not_logged_in);
+        ((PrefsActivity) getActivity()).forzeGoToLoginScreen();
     }
 
     private void clearNotificationProcessCachedData() {

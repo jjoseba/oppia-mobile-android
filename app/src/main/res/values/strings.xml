@@ -6,7 +6,6 @@
     <string name="about_not_logged_in">Not logged in</string>
 
     <string name="menu_download">Download Courses</string>
-    <string name="menu_language">Change language</string>
     <string name="menu_change_text_size">Change text size</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_privacy">Privacy and Your Data</string>
@@ -61,6 +60,7 @@
 
     <string name="widget_feedback_submit">Submit</string>
     <string name="widget_feedback_submit_title">Thank you for submitting your feedback.</string>
+    <string name="widget_feedback_unavailable_attempts">You have already sent your feedback</string>
 
     <string name="widget_quiz_next">Next</string>
     <string name="widget_quiz_prev">Prev</string>
@@ -95,9 +95,10 @@
 
     <string name="prefCurrentVersion">Current version: %1$s</string>
     <string name="prefAdvanced">Advanced settings</string>
-    <string name="prefBackgroudDataConnect">Background activity tracker</string>
-    <string name="prefBackgroudDataConnect_summary">Send activity logs even when this application isn\'t running</string>
-    <string name="prefLanguage">Preferred Language</string>
+    <string name="prefBackgroundDataConnect">Background activity tracker</string>
+    <string name="prefBackgroundDataConnect_summary">Send activity logs even when this application isn\'t running</string>
+    <string name="prefContentLanguage">Preferred content language</string>
+    <string name="prefInterfaceLanguage">Interface language</string>
     <string name="prefHighlightCompleted">Highlight completed activities</string>
     <string name="prefServer">Server</string>
     <string name="prefServer_notChecked">Unchecked URL</string>
@@ -117,9 +118,7 @@
     <string name="prefUserHint">(read only)</string>
     <string name="prefLogoutEnabled">Enable logout from homepage</string>
     <string name="prefDeleteCourseEnabled">Enable deleting of courses</string>
-    <string name="prefDownloadViaCellularEnabled">Download media via cellular network</string>
     <string name="prefDisableNotifications">Disable notifications</string>
-
     <string name="prefNotifications_title">Notifications</string>
     <string name="prefSecurity_title">Security</string>
     <string name="prefAdvanced_title">Advanced</string>
@@ -307,7 +306,6 @@
     <string name="error_tts_start">Text To Speech failed. Please check your phone to ensure have Text to Speech installed and enabled</string>
     <string name="warning_wifi_required">You must be connected to a wifi network to download the media files.\nPlease connect to a wifi network to download the media files on your phone, or download the files via your PC.</string>
     <string name="warning_delete_disabled">Sorry, deleting a course is currently disabled - please update your settings to allow deleting of courses.</string>
-    <string name="warning_download_via_cellular_enabled">Warning! Allowing media files to be downloaded via your mobile (cellular) network may incur high charges for data download.\n\n It is not recommended to enable this if you are on a slow mobile network.</string>
 
     <string name="login_process">Logging in</string>
     <string name="login_complete">Logged in</string>
@@ -324,7 +322,7 @@
 
     <string name="remember_username_complete">An email has been sent with a reminder of your username</string>
 
-    <string name="change_language">Change Language</string>
+    <string name="change_content_language">Change content language</string>
 
     <string name="course_draft">Draft version</string>
 
@@ -364,7 +362,7 @@
 
     <string name="permissions.title">&appName;
         needs the following permissions to function properly:</string>
-    <string name="permissions.storage.title">read and modify contents of the SD card</string>
+    <string name="permissions.storage.title">Read and modify contents of the SD card</string>
     <string name="permissions.simple.title">Permissions needed</string>
     <string name="permissions.storage.description">&appName; needs access to the SD card to be able to store the downloaded media contents for the courses</string>
     <string name="permissions.phone_state.title">read phone state and identity</string>
@@ -487,7 +485,7 @@
     <string name="leaderboard_position">Your position</string>
     <string name="leaderboard_points">%1$s points</string>
 
-    <string name="transfer_receiving_course">Receiving course file...</string>
+    <string name="transfer_receiving_course">Receiving course file…</string>
     <string name="sign_in_title">Sign in</string>
     <string name="register_account_already">Already have an account?</string>
     <string name="login_dont_have_account">Don\'t have an account yet?</string>
@@ -495,7 +493,7 @@
     <string name="register_offline">Register offline</string>
     <string name="field_required">This field cannot be empty</string>
     <string name="field_spaces_error">Cannot contain spaces</string>
-    <string name="permissions.location.title">access location</string>
+    <string name="permissions.location.title">Access location</string>
     <string name="permissions.location.description">In new Android devices, this permission is needed to be able to pair with other devices using Bluetooth</string>
     <string name="points">points</string>
     <string name="last_year">last year</string>
@@ -534,7 +532,7 @@
     <string name="title_activity_edit_profile">Edit profile</string>
     <string name="option_available_online">This option is only available when the device is connected to the Internet</string>
     <string name="save_profile">Save profile</string>
-    <string name="profile_updated_successfuly">Profile updated successfully</string>
+    <string name="profile_updated_successfully">Profile updated successfully</string>
     <string name="activitylog_submitted">submitted to server</string>
     <string name="activitylog_tosubmit">to submit</string>
     <string name="activitylog_toexport">to export</string>
@@ -545,7 +543,8 @@
     <string name="options">Options</string>
     <string name="quiz_loading_error">Unexpected error loading quiz. Maybe the format was wrong or out-dated?</string>
     <string name="error_register_username_length">Username must have at least %d characters</string>
-    <string name="change_server_logout_warning">You are already logged in. If you change the server your current session will finish. Do you confirm?</string>
+    <string name="change_setting_apikey_warning">This will invalidate the API keys for every user cached in the device, so they will need an active internet connection to login again.</string>
+    <string name="change_setting_logout_warning">You are currently logged in. If you change this setting your session will finish. Do you confirm?</string>
     <string name="accept">Accept</string>
     <string name="user_not_logged_in">User not logged in</string>
 
@@ -574,8 +573,8 @@
     <string name="new_courses">New courses</string>
     <string name="back">Back</string>
     <string name="continue_to_course">Continue to course</string>
-    <string name="processing">Processing...</string>
-    <string name="user_data_download_success">Your data was downloaded successfuly.\nYou can access it in the Downloads system folder.</string>
+    <string name="processing">Processing…</string>
+    <string name="user_data_download_success">Your data was downloaded successfully.\nYou can access it in the Downloads system folder.</string>
     <string name="open_download_folder">Open download folder</string>
     <string name="error_download_failure_reason_format">Download failure. Reason: %s</string>
     <string name="download_certificate">Download certificate</string>
@@ -606,5 +605,53 @@
 
     <string name="warning_reminder_weekly_just_one_day">For weekly interval only one day must be set</string>
     <string name="warning_reminder_at_least_one_day">You have to set at least one day</string>
+
+    <string name="quiz_protected">Quiz protected</string>
+    <string name="please_enter_quiz_password">Please, enter password to access this quiz</string>
+    <string name="invalid_password">Invalid password</string>
+    <string name="pref_export_full_activity_title">Export full activity data</string>
+    <string name="full_activity_exported_success">Full activity exported successfully.\n\nYou can send it to external apps clicking "Share" button</string>
+    <string name="full_activity_export_path">\n\nPath: %s.</string>
+    <string name="share">Share</string>
+    <string name="no_app_to_share">Error. There is no installed app to share this file</string>
+    <string name="pref_flush_app_cache">Flush app cache</string>
+    <string name="cache_flushed_successfuly">Cache flushed successfuly</string>
+
+    <string name="incorrect_password_topic">Incorrect topic password. Try again</string>
+    <string name="password_needed">Password needed</string>
+    <string name="password_needed_description">This topic is password protected. \n Please enter the password below to access content (you will only need to do this once).</string>
+    <string name="password_activity_title">Activity protected</string>
+    <string name="password_activity_description">This activity is password protected. \n Please, enter the password below to access its contents. </string>
+    <string name="password_activity_incorrect">Incorrect password. Try again</string>
+    <string name="password_activity_submit">Access contents</string>
+    <string name="unlock_topic">Unlock topic</string>
+    <string name="staging_warning_msg">You are connected to a staging/development server.</string>
+
+    <!-- Status badges -->
+    <string name="status_draft">Draft</string>
+    <string name="status_new_download_disabled">New download disabled</string>
+    <string name="status_archived">Archived</string>
+    <string name="status_read_only">Read only</string>
+    <string name="quiz">Quiz</string>
+    <string name="read_only_answer_unavailable_message">This course is now read-only so access to this %s is no longer available</string>
+    <string name="view_your_previous_attempts">View your previous attempts</string>
+    <string name="invalid_parameters">Invalid parameters</string>
+    <string name="source_dir_does_not_exist">Source directory does not exist</string>
+    <string name="source_file_does_not_exist">Source file does not exist</string>
+    <string name="dest_dir_does_not_exist">Destination directory does not exist</string>
+    <string name="pref_update_activity_on_login">Update activity on login</string>
+
+    <!-- Update activity on login -->
+    <string name="none">None</string>
+    <string name="optional">Optional</string>
+    <string name="force">Force</string>
+    <string name="updating_course_activity">Updating course activity: %s</string>
+    <string name="error_unable_retrieve_course_activity">Currently unable to retrieve course activity</string>
+    <string name="connection_unavailable_couse_activity">Connection unavailable, unable to retrieve course activity</string>
+    <string name="try_again">Try again</string>
+    <string name="continue_anyway">Continue anyway</string>
+    <string name="offline_user_not_found">Offline user not found.\nYou have no internet connection so only local users are available.</string>
+    <string name="offline_user_invalid_password">Invalid password.\nYou have no internet connection so only local users are available.</string>
+
 </resources>
 

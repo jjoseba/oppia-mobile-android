@@ -108,11 +108,11 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
             json.put("username", u.getUsername());
             json.put("password", u.getPassword());
             json.put("passwordagain", u.getPasswordAgain());
-            json.put("email", u.getEmail());
-            json.put("first_name", u.getFirstname());
-            json.put("last_name", u.getLastname());
+            json.put(User.EMAIL, u.getEmail());
+            json.put(User.FIRST_NAME, u.getFirstname());
+            json.put(User.LAST_NAME, u.getLastname());
             json.put("jobtitle", u.getJobTitle());
-            json.put("organisation", u.getOrganisation());
+            json.put(User.ORGANISATION, u.getOrganisation());
             json.put("phoneno", u.getPhoneNo());
 
             List<CustomField> cFields = DbHelper.getInstance(ctx).getCustomFields();
@@ -133,14 +133,14 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
             Response response = client.newCall(request).execute();
             if (response.isSuccessful()) {
                 JSONObject jsonResp = new JSONObject(response.body().string());
-                u.setApiKey(jsonResp.getString("api_key"));
+                u.setApiKey(jsonResp.getString(User.API_KEY));
                 u.setOfflineRegister(false);
                 u.setBadges(getBadges(jsonResp));
                 u.setScoringEnabled(getScoringEnabled(jsonResp));
                 u.setBadgingEnabled(getBadgingEnabled(jsonResp));
-                u.setFirstname(jsonResp.getString("first_name"));
-                u.setLastname(jsonResp.getString("last_name"));
-                saveMetaData(jsonResp);
+                u.setFirstname(jsonResp.getString(User.FIRST_NAME));
+                u.setLastname(jsonResp.getString(User.LAST_NAME));
+                new MetaDataUtils(ctx).saveMetaData(jsonResp);
                 return true;
             } else if (response.code() == 400) {
                 String bodyResponse = response.body().string();
@@ -155,12 +155,10 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
         } catch (javax.net.ssl.SSLHandshakeException e) {
             Log.d(TAG, "SSLHandshakeException:", e);
-            Analytics.logException(e);
             result.setSuccess(false);
             result.setResultMessage(ctx.getString(R.string.error_connection_ssl));
         } catch (UnsupportedEncodingException e) {
             result.setSuccess(false);
-
             result.setResultMessage(ctx.getString(R.string.error_connection));
         } catch (IOException e) {
             result.setSuccess(false);
@@ -176,7 +174,7 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
     private int getBadges(JSONObject jsonResp) {
         try {
-            return jsonResp.getInt("badges");
+            return jsonResp.getInt(User.BADGES);
         } catch (JSONException e) {
             return 0;
         }
@@ -184,7 +182,7 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
     private boolean getScoringEnabled(JSONObject jsonResp) {
         try {
-            return jsonResp.getBoolean("scoring");
+            return jsonResp.getBoolean(User.SCORING_ENABLED);
         } catch (JSONException e) {
             return true;
         }
@@ -192,21 +190,12 @@ public class RegisterTask extends APIRequestTask<User, Object, EntityResult<User
 
     private boolean getBadgingEnabled(JSONObject jsonResp) {
         try {
-            return jsonResp.getBoolean("badging");
+            return jsonResp.getBoolean(User.BADGING_ENABLED);
         } catch (JSONException e) {
             return true;
         }
     }
 
-    private void saveMetaData(JSONObject jsonResp) {
-        try {
-            JSONObject metadata = jsonResp.getJSONObject("metadata");
-            MetaDataUtils mu = new MetaDataUtils(ctx);
-            mu.saveMetaData(metadata, prefs);
-        } catch (JSONException e) {
-            Log.d(TAG, "JSONException:", e);
-        }
-    }
 
     @Override
     protected void onPostExecute(EntityResult<User> result) {

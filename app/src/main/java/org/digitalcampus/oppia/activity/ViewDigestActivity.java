@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 
@@ -13,6 +12,7 @@ import androidx.annotation.Nullable;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityViewDigestBinding;
 import org.digitalcampus.oppia.api.ApiEndpoint;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.listener.CourseInstallerListener;
 import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.Course;
@@ -23,6 +23,7 @@ import org.digitalcampus.oppia.service.courseinstall.CourseInstallerService;
 import org.digitalcampus.oppia.service.courseinstall.CourseInstallerServiceDelegate;
 import org.digitalcampus.oppia.service.courseinstall.InstallerBroadcastReceiver;
 import org.digitalcampus.oppia.task.CourseInfoTask;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import javax.inject.Inject;
 
@@ -108,7 +109,7 @@ public class ViewDigestActivity extends AppActivity implements CourseInstallerLi
     private void processLinkPath(Uri data) {
 
         try {
-            if (!TextUtils.equals(data.getPathSegments().get(0), "view")) {
+            if (!TextUtilsJava.equals(data.getPathSegments().get(0), "view")) {
                 throw new IllegalArgumentException("Incorrect path segment");
             }
         } catch (Exception e) {
@@ -181,7 +182,8 @@ public class ViewDigestActivity extends AppActivity implements CourseInstallerLi
             } else {
                 Intent i = new Intent(this, CourseIndexActivity.class);
                 Bundle tb = new Bundle();
-                tb.putSerializable(Course.TAG, course);
+                Course c = DbHelper.getInstance(this).getCourseWithProgress(activity.getCourseId(), user.getUserId());
+                tb.putSerializable(Course.TAG, c);
                 tb.putSerializable(CourseIndexActivity.JUMPTO_TAG, activity.getDigest());
                 i.putExtras(tb);
                 startActivity(i);
@@ -202,7 +204,7 @@ public class ViewDigestActivity extends AppActivity implements CourseInstallerLi
 
     private boolean isUserLoggedIn() {
 
-        if (user == null || TextUtils.isEmpty(user.getUsername())) {
+        if (user == null || TextUtilsJava.isEmpty(user.getUsername())) {
             Log.d(TAG, "Not logged in");
             showLoginAccess();
             return false;
@@ -243,7 +245,6 @@ public class ViewDigestActivity extends AppActivity implements CourseInstallerLi
 
 
     }
-
 
     // COURSE INFO LISTENERS
     @Override

@@ -1,16 +1,16 @@
-/* 
+/*
  * This file is part of OppiaMobile - https://digital-campus.org/
- * 
+ *
  * OppiaMobile is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * OppiaMobile is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with OppiaMobile. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -21,7 +21,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -31,6 +30,8 @@ import android.widget.Toast;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityDownloadBinding;
+import org.digitalcampus.oppia.application.App;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.model.CourseInstallViewAdapter;
 import org.digitalcampus.oppia.adapter.DownloadCoursesAdapter;
 import org.digitalcampus.oppia.analytics.Analytics;
@@ -41,11 +42,13 @@ import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.CourseInstallRepository;
 import org.digitalcampus.oppia.model.CoursesRepository;
 import org.digitalcampus.oppia.model.Tag;
+import org.digitalcampus.oppia.model.User;
 import org.digitalcampus.oppia.service.courseinstall.CourseInstallerServiceDelegate;
 import org.digitalcampus.oppia.service.courseinstall.CourseInstallerService;
 import org.digitalcampus.oppia.service.courseinstall.InstallerBroadcastReceiver;
 import org.digitalcampus.oppia.task.result.BasicResult;
 import org.digitalcampus.oppia.utils.MultiChoiceHelper;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.UIUtils;
 import org.digitalcampus.oppia.utils.storage.Storage;
 import org.json.JSONException;
@@ -337,7 +340,10 @@ public class DownloadActivity extends AppActivity implements APIRequestListener,
 
             // TODO 'refreshCourseList' method should be refactorized
             courseInstallRepository.refreshCourseList(this, courses, json, storage, mode == MODE_COURSE_TO_UPDATE);
-            if (mode == MODE_COURSE_TO_UPDATE) {
+            if (mode == MODE_TAG_COURSES) {
+                filterCoursesByCohort();
+                filterByCoursesAvailableForNewDownloads();
+            } else if (mode == MODE_COURSE_TO_UPDATE) {
                 filterOnlyInstalledCourses();
             } else if (mode == MODE_NEW_COURSES) {
                 filterNewCoursesNotSeen();
@@ -345,8 +351,8 @@ public class DownloadActivity extends AppActivity implements APIRequestListener,
             coursesAdapter.notifyDataSetChanged();
             binding.emptyState.setVisibility((courses.isEmpty()) ? View.VISIBLE : View.GONE);
 
-		} catch (Exception e) {
-			Analytics.logException(e);
+        } catch (JSONException e) {
+            Analytics.logException(e);
             Log.d(TAG, "Error processing response: ", e);
             UIUtils.showAlert(this, R.string.loading, R.string.error_processing_response);
         }
@@ -377,6 +383,22 @@ public class DownloadActivity extends AppActivity implements APIRequestListener,
     }
 
 
+    private void filterByCoursesAvailableForNewDownloads() {
+        Iterator<CourseInstallViewAdapter> iter = courses.iterator();
+        while (iter.hasNext()) {
+            CourseInstallViewAdapter courseAdapter = iter.next();
+            if (courseAdapter.hasStatus(Course.STATUS_NEW_DOWNLOADS_DISABLED)
+                    || courseAdapter.hasStatus(Course.STATUS_READ_ONLY)) {
+                App app = (App) this.getApplicationContext();
+                User currentUser = app.getComponent().getUser();
+                long id = DbHelper.getInstance(this).getCourseIdByShortname(courseAdapter.getShortname(), currentUser.getUserId());
+                if (id == -1) {  // It is not installed
+                    iter.remove();
+                }
+            }
+        }
+    }
+
     private void filterOnlyInstalledCourses() {
         List<Course> installedCourses = coursesRepository.getCourses(this);
 
@@ -390,9 +412,23 @@ public class DownloadActivity extends AppActivity implements APIRequestListener,
 
     }
 
+    private void filterCoursesByCohort() {
+        App app = (App) this.getApplicationContext();
+        User currentUser = app.getComponent().getUser();
+        Iterator<CourseInstallViewAdapter> iter = courses.iterator();
+        while (iter.hasNext()) {
+            CourseInstallViewAdapter courseAdapter = iter.next();
+            boolean commonCohort = courseAdapter.getRestrictedCohorts().stream()
+                    .anyMatch(currentUser.getCohorts()::contains);
+            if (courseAdapter.isRestricted() && !commonCohort) {// It is not installed
+                iter.remove();
+            }
+        }
+    }
+
     private boolean isInstalled(CourseInstallViewAdapter courseAdapter, List<Course> installedCourses) {
         for (Course course : installedCourses) {
-            if (TextUtils.equals(course.getShortname(), courseAdapter.getShortname())) {
+            if (TextUtilsJava.equals(course.getShortname(), courseAdapter.getShortname())) {
                 return true;
             }
         }
@@ -452,8 +488,8 @@ public class DownloadActivity extends AppActivity implements APIRequestListener,
                     findCourseAndDownload(courseToUpdate);
                 }
 
-			} catch (JSONException e) {
-				Analytics.logException(e);
+            } catch (JSONException e) {
+                Analytics.logException(e);
                 Log.d(TAG, "Error connecting to server: ", e);
                 UIUtils.showAlert(this, R.string.loading, R.string.error_connection, finishActivity);
             }
@@ -465,7 +501,7 @@ public class DownloadActivity extends AppActivity implements APIRequestListener,
 
     private void findCourseAndDownload(Course courseToUpdate) {
         for (CourseInstallViewAdapter course : courses) {
-            if (TextUtils.equals(course.getShortname(), courseToUpdate.getShortname())) {
+            if (TextUtilsJava.equals(course.getShortname(), courseToUpdate.getShortname())) {
                 downloadCourse(course);
             }
         }

@@ -17,7 +17,6 @@
 
 package org.digitalcampus.oppia.activity;
 
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -29,21 +28,23 @@ import org.digitalcampus.mobile.learning.databinding.ActivityDownloadBinding;
 import org.digitalcampus.oppia.adapter.TagsAdapter;
 import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.api.ApiEndpoint;
+import org.digitalcampus.oppia.database.DbHelper;
 import org.digitalcampus.oppia.listener.APIRequestListener;
+import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.Tag;
 import org.digitalcampus.oppia.model.TagRepository;
 import org.digitalcampus.oppia.task.result.BasicResult;
+import org.digitalcampus.oppia.utils.CourseUtils;
 import org.digitalcampus.oppia.utils.UIUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import javax.inject.Inject;
-
-import androidx.recyclerview.widget.RecyclerView;
 
 public class TagSelectActivity extends AppActivity implements APIRequestListener {
 
@@ -87,6 +88,7 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 			startActivity(i);
 		});
 
+		CourseUtils.updateCourseCache(this, prefs, apiEndpoint);
 	}
 
 	
@@ -144,7 +146,6 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 	}
 	
 	private void getTagList() {
-		showProgressDialog(getString(R.string.loading));
 
 		tagRepository.getTagList(this, apiEndpoint);
 	}
@@ -152,7 +153,8 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 	public void refreshTagList() {
 		tags.clear();
 		try {
-			tagRepository.refreshTagList(tags, json);
+
+			tagRepository.refreshTagList(tags, json, getInstalledCoursesNames());
 
             adapterTags.notifyDataSetChanged();
             binding.emptyState.setVisibility((tags.isEmpty()) ? View.VISIBLE : View.GONE);
@@ -163,7 +165,16 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 		}
 		
 	}
-	
+
+	private List<String> getInstalledCoursesNames() {
+		List<Course> installedCourses = DbHelper.getInstance(this).getAllCourses();
+		List<String> installedCoursesNames = new ArrayList<>();
+		for (Course course : installedCourses) {
+			installedCoursesNames.add(course.getShortname());
+		}
+		return installedCoursesNames;
+	}
+
 	public void apiRequestComplete(BasicResult result) {
 		hideProgressDialog();
 		
@@ -187,5 +198,4 @@ public class TagSelectActivity extends AppActivity implements APIRequestListener
 		}
 
 	}
-
 }

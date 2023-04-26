@@ -38,6 +38,7 @@ import org.digitalcampus.oppia.model.QuizAnswerFeedback;
 import org.digitalcampus.oppia.model.QuizAttempt;
 import org.digitalcampus.oppia.model.QuizAttemptRepository;
 import org.digitalcampus.oppia.model.QuizStats;
+import org.digitalcampus.oppia.utils.CourseUtils;
 import org.digitalcampus.oppia.utils.DateUtils;
 import org.digitalcampus.oppia.utils.xmlreaders.CourseXMLReader;
 import org.json.JSONArray;
@@ -55,7 +56,6 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 
 public class QuizAttemptActivity extends AppActivity {
 
-	private ActivityQuizAttemptBinding binding;
 	private QuizAttempt quizAttempt;
 	private Course course;
 
@@ -71,11 +71,11 @@ public class QuizAttemptActivity extends AppActivity {
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-		binding = ActivityQuizAttemptBinding.inflate(LayoutInflater.from(this));
+		ActivityQuizAttemptBinding binding = ActivityQuizAttemptBinding.inflate(LayoutInflater.from(this));
         setContentView(binding.getRoot());
 		getAppComponent().inject(this);
 
-		String prefLang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+		String prefLang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
         Bundle bundle = this.getIntent().getExtras();
 
         if (bundle == null) {
@@ -83,10 +83,11 @@ public class QuizAttemptActivity extends AppActivity {
         }
 
 		quizAttempt = (QuizAttempt) bundle.getSerializable(QuizAttempt.TAG);
-		course = DbHelper.getInstance(this).getCourse(quizAttempt.getCourseId(), quizAttempt.getUserId());
+		course = DbHelper.getInstance(this).getCourseWithProgress(quizAttempt.getCourseId(), quizAttempt.getUserId());
 
+		boolean isReadOnlyCourse = CourseUtils.isReadOnlyCourse(this, quizAttempt.getActivityDigest(), prefs);
 		boolean showAttemptQuizButton = bundle.getBoolean(CourseQuizAttemptsActivity.SHOW_ATTEMPT_BUTTON, false);
-		if (showAttemptQuizButton){
+		if (showAttemptQuizButton && !isReadOnlyCourse){
 			binding.retakeQuizBtn.setVisibility(View.VISIBLE);
 			binding.retakeQuizBtn.setOnClickListener(view -> retakeQuiz());
 		}
@@ -111,6 +112,7 @@ public class QuizAttemptActivity extends AppActivity {
 		} catch (InvalidXMLException ixmle) {
 			Log.d(TAG,"Invalid course xml file", ixmle);
 			Analytics.logException(ixmle);
+			return;
 		}
 
 		if (quizAttempt.getData() == null){
@@ -140,12 +142,17 @@ public class QuizAttemptActivity extends AppActivity {
 			}
 		}
 
-		QuizAnswersFeedbackAdapter adapterQuizFeedback = new QuizAnswersFeedbackAdapter(this, quizAnswerFeedback);
-		binding.recyclerQuizResultsFeedback.setAdapter(adapterQuizFeedback);
+		if (quiz.mustShowQuizResultsLater()) {
+			QuizAnswersFeedbackAdapter adapterQuizFeedback = new QuizAnswersFeedbackAdapter(this, quizAnswerFeedback);
+			binding.recyclerQuizResultsFeedback.setAdapter(adapterQuizFeedback);
+		} else {
+			binding.recyclerQuizResultsFeedback.setVisibility(View.GONE);
+		}
+
 
 		if (quiz.limitAttempts()){
 			//Check if the user has attempted the quiz the max allowed
-			QuizStats qs = attemptsRepository.getQuizAttemptStats(this, quizAttempt.getActivityDigest());
+			QuizStats qs = attemptsRepository.getQuizAttemptStats(this, parsed.getCourseId(), quizAttempt.getActivityDigest());
 			if (qs.getNumAttempts() >= quiz.getMaxAttempts()){
 				binding.retakeQuizBtn.setVisibility(View.GONE);
 			}

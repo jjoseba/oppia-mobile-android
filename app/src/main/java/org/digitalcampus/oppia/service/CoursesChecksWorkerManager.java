@@ -1,21 +1,17 @@
 package org.digitalcampus.oppia.service;
 
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
-
-import androidx.core.app.NotificationCompat;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import org.digitalcampus.mobile.learning.BuildConfig;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.DownloadActivity;
-import org.digitalcampus.oppia.activity.MainActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.activity.TagSelectActivity;
 import org.digitalcampus.oppia.analytics.Analytics;
@@ -33,6 +29,7 @@ import org.digitalcampus.oppia.model.responses.CoursesServerResponse;
 import org.digitalcampus.oppia.task.APIUserRequestTask;
 import org.digitalcampus.oppia.task.result.BasicResult;
 import org.digitalcampus.oppia.utils.CourseUtils;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.ui.OppiaNotificationUtils;
 
 import java.util.HashSet;
@@ -40,6 +37,8 @@ import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
+
+import androidx.core.app.NotificationCompat;
 
 /**
  * Class isolated for unit testing purposes
@@ -81,7 +80,7 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
     }
 
     private boolean isUserLoggedIn() {
-        return user != null && !TextUtils.isEmpty(user.getUsername());
+        return user != null && !TextUtilsJava.isEmpty(user.getUsername());
     }
 
     public void startChecks() {
@@ -114,7 +113,7 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
         }
 
         List<Course> courses = coursesRepository.getCourses(context);
-        if (courses.size() < App.DOWNLOAD_COURSES_DISPLAY) {
+        if (courses.size() < BuildConfig.DOWNLOAD_COURSES_DISPLAY) {
 
             NotificationCompat.Builder mBuilder = OppiaNotificationUtils.getBaseBuilder(context, true);
             mBuilder
@@ -199,7 +198,7 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
             return;
         }
 
-        CourseUtils.setSyncStatus(prefs, coursesInstalled, lastVersionTimestampChecked);
+        CourseUtils.refreshStatuses(prefs, coursesInstalled, lastVersionTimestampChecked);
 
         int toUpdateCount = 0;
 
@@ -224,7 +223,7 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
         Set<String> newCoursesNotified = prefs.getStringSet(PrefsActivity.PREF_NEW_COURSES_LIST_NOTIFIED, null);
 
         Log.i(TAG, "checkNewCoursesAndNotify: newCoursesNotified count: " +
-                (newCoursesNotified != null ? newCoursesNotified.size()+"" : "null"));
+                (newCoursesNotified != null ? newCoursesNotified.size() + "" : "null"));
 
         if (newCoursesNotified == null) {
 
@@ -242,6 +241,12 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
 
             Set<String> notInstalledAndNotNotifiedCourses = new HashSet<>();
             for (CourseServer courseServer : notInstalledCourses) {
+
+                if (courseServer.hasStatus(Course.STATUS_NEW_DOWNLOADS_DISABLED)
+                        || courseServer.hasStatus(Course.STATUS_READ_ONLY)) {
+                    continue;
+                }
+
                 if (!newCoursesNotified.contains(courseServer.getShortname())) {
                     notInstalledAndNotNotifiedCourses.add(courseServer.getShortname());
                 }
@@ -249,7 +254,7 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
 
             Log.i(TAG, "checkNewCoursesAndNotify: notInstalledAndNotNotifiedCourses: " + notInstalledAndNotNotifiedCourses);
 
-            if (notInstalledAndNotNotifiedCourses.size() > 0) {
+            if (!notInstalledAndNotNotifiedCourses.isEmpty()) {
                 showNewCoursesNotification(notInstalledAndNotNotifiedCourses.size());
             }
 
@@ -306,13 +311,10 @@ public class CoursesChecksWorkerManager implements APIRequestFinishListener, API
     public void onRequestFinish(String idRequest) {
 
         pendingChecks--;
-
         Log.i(TAG, "onRequestFinish: pendingChecks: " + pendingChecks);
 
-        if (pendingChecks == 0) {
-            if (onFinishListener != null) {
-                onFinishListener.onFinish(null);
-            }
+        if ((pendingChecks == 0) && (onFinishListener != null)) {
+            onFinishListener.onFinish(null);
         }
     }
 

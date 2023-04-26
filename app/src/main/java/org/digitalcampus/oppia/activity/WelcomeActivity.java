@@ -33,7 +33,8 @@ import androidx.fragment.app.Fragment;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityWelcomeBinding;
 import org.digitalcampus.oppia.adapter.ActivityPagerAdapter;
-import org.digitalcampus.oppia.analytics.Analytics;
+import org.digitalcampus.oppia.analytics.AnalyticsProvider;
+import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.fragments.LoginFragment;
@@ -42,11 +43,14 @@ import org.digitalcampus.oppia.fragments.RememberUsernameFragment;
 import org.digitalcampus.oppia.fragments.ResetPasswordFragment;
 import org.digitalcampus.oppia.fragments.WelcomeFragment;
 import org.digitalcampus.oppia.model.User;
+import org.digitalcampus.oppia.task.FetchUserTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.inject.Inject;
 
 public class WelcomeActivity extends AppActivity {
 
@@ -68,21 +72,21 @@ public class WelcomeActivity extends AppActivity {
     private int currentTab = TAB_WELCOME;
     private ActivityWelcomeBinding binding;
 
+    @Inject
+    AnalyticsProvider analyticsProvider;
+
+    @Inject
+    ApiEndpoint apiEndpoint;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityWelcomeBinding.inflate(LayoutInflater.from(this));
         setContentView(binding.getRoot());
         getAppComponent().inject(this);
-    }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-
-        binding.toolbar.getMenu().clear();
-        binding.toolbar.inflateMenu(R.menu.activity_welcome);
-        binding.toolbar.setOnMenuItemClickListener(this::onOptionsItemSelected);
+        setSupportActionBar(binding.toolbar);
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
         List<Fragment> fragments = new ArrayList<>();
         List<String> tabTitles = new ArrayList<>();
@@ -113,6 +117,7 @@ public class WelcomeActivity extends AppActivity {
 
         setMenuOverflowIconColor(currentTab);
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -165,7 +170,7 @@ public class WelcomeActivity extends AppActivity {
         }
     }
 
-    public void onSuccessUserAccess(User user) {
+    public void onSuccessUserAccess(User user, boolean firstLogin) {
 
         boolean fromViewDigest = getIntent().getBooleanExtra(ViewDigestActivity.EXTRA_FROM_VIEW_DIGEST, false);
 
@@ -174,13 +179,17 @@ public class WelcomeActivity extends AppActivity {
         if (fromViewDigest) {
             setResult(Activity.RESULT_OK);
         } else {
-            startActivity(new Intent(this, MainActivity.class));
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.putExtra(MainActivity.EXTRA_FIRST_LOGIN, firstLogin);
+            startActivity(intent);
         }
 
-		if (Analytics.shouldShowOptOutRationale(this)){
+		if (analyticsProvider.shouldShowOptOutRationale(this)){
             overridePendingTransition(0, 0);
             startActivity(new Intent(this, AnalyticsOptinActivity.class));
         }
+
+        new FetchUserTask().updateLoggedUserProfile(this, apiEndpoint, user);
 
         finish();
     }

@@ -21,17 +21,19 @@ import android.content.Context;
 import android.util.Log;
 
 import org.digitalcampus.mobile.learning.R;
+import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.CourseInstallViewAdapter;
 import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.api.Paths;
 import org.digitalcampus.oppia.task.result.EntityResult;
+import org.digitalcampus.oppia.utils.CourseUtils;
 import org.digitalcampus.oppia.utils.HTTPClientUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -94,13 +96,24 @@ public class CourseInfoTask extends APIRequestTask<String, Void, EntityResult<Co
         JSONObject jsonObject = new JSONObject(courseJsonString);
         CourseInstallViewAdapter course = new CourseInstallViewAdapter("");
         course.setCourseId(jsonObject.getInt("id"));
-        course.setShortname(jsonObject.getString("shortname"));
-        course.setTitlesFromJSONObjectMap(jsonObject.getJSONObject("title"));
-        course.setDescriptionsFromJSONObjectMap(jsonObject.getJSONObject("description"));
-        course.setDraft(jsonObject.getBoolean("is_draft"));
-        course.setVersionId(jsonObject.getDouble("version"));
-        course.setDownloadUrl(jsonObject.getString("url"));
-        course.setAuthorName(jsonObject.getString("author"));
+        course.setShortname(jsonObject.getString(Course.JSON_PROPERTY_SHORTNAME));
+        course.setTitlesFromJSONObjectMap(jsonObject.getJSONObject(Course.JSON_PROPERTY_TITLE));
+        course.setDescriptionsFromJSONObjectMap(jsonObject.getJSONObject(Course.JSON_PROPERTY_DESCRIPTION));
+        course.setStatus(jsonObject.getString(Course.JSON_PROPERTY_STATUS));
+        course.setVersionId(jsonObject.getDouble(Course.JSON_PROPERTY_VERSION));
+        course.setDownloadUrl(jsonObject.getString(Course.JSON_PROPERTY_URL));
+        course.setAuthorName(jsonObject.getString(Course.JSON_PROPERTY_AUTHOR));
+
+        if (jsonObject.has(Course.JSON_PROPERTY_RESTRICTED)){
+            boolean courseRestricted = jsonObject.getBoolean(Course.JSON_PROPERTY_RESTRICTED);
+            course.setRestricted(courseRestricted);
+
+            if (courseRestricted) {
+                List<Integer> restrictedCohorts = CourseUtils.parseCourseCohortsFromJSONArray(jsonObject.getJSONArray(Course.JSON_PROPERTY_RESTRICTED_COHORTS));
+                course.setRestrictedCohorts(restrictedCohorts);
+            }
+        }
+
         return course;
 
     }

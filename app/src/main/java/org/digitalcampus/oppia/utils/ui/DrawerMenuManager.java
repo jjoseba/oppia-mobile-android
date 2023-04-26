@@ -28,6 +28,7 @@ import android.widget.TextView;
 
 import com.google.android.material.navigation.NavigationView;
 
+import org.digitalcampus.mobile.learning.BuildConfig;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.AboutActivity;
 import org.digitalcampus.oppia.activity.ActivityLogActivity;
@@ -37,7 +38,6 @@ import org.digitalcampus.oppia.activity.PrivacyActivity;
 import org.digitalcampus.oppia.activity.SyncActivity;
 import org.digitalcampus.oppia.activity.TagSelectActivity;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
-import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
 
 import java.util.HashMap;
@@ -119,10 +119,11 @@ public class DrawerMenuManager {
         }
 
         SharedPreferences prefs = drawerAct.getPrefs();
-        itemSettings.setVisible(App.MENU_ALLOW_SETTINGS);
-        itemCourseDownload.setVisible(prefs.getBoolean(PrefsActivity.PREF_DOWNLOAD_ENABLED, App.MENU_ALLOW_COURSE_DOWNLOAD));
-        itemLanguageDialog.setVisible(customOptions.containsKey(R.id.menu_language) && prefs.getBoolean(PrefsActivity.PREF_CHANGE_LANGUAGE_ENABLED, App.MENU_ALLOW_LANGUAGE));
-        itemSync.setVisible(App.MENU_ALLOW_SYNC);
+        itemSettings.setVisible(BuildConfig.MENU_ALLOW_SETTINGS);
+        itemCourseDownload.setVisible(prefs.getBoolean(PrefsActivity.PREF_DOWNLOAD_ENABLED, BuildConfig.MENU_ALLOW_COURSE_DOWNLOAD));
+        itemLanguageDialog.setVisible(customOptions.containsKey(R.id.menu_language)
+                && prefs.getBoolean(PrefsActivity.PREF_CHANGE_LANGUAGE_ENABLED, BuildConfig.MENU_ALLOW_LANGUAGE));
+        itemSync.setVisible(BuildConfig.MENU_ALLOW_SYNC);
     }
 
     public void onPostCreate() {

@@ -3,11 +3,9 @@ package org.digitalcampus.oppia.task;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.api.RemoteApiEndpoint;
 import org.digitalcampus.oppia.application.SessionManager;
@@ -19,8 +17,6 @@ import org.digitalcampus.oppia.task.result.BasicResult;
 import org.digitalcampus.oppia.utils.HTTPClientUtils;
 
 import androidx.preference.PreferenceManager;
-
-import java.net.URLEncoder;
 
 import okhttp3.Request;
 
@@ -51,11 +47,12 @@ public abstract class APIRequestTask<P, G, R> extends AsyncTask<P, G, R> {
         try {
             User u = db.getUser(SessionManager.getUsername(ctx));
 
+            Log.i(TAG, "user api key: " + u.getApiKey());
+
             requestBuilder = new Request.Builder()
                     .url(HTTPClientUtils.getUrlWithCredentials(url, u.getUsername(), u.getApiKey()));
 
         } catch (UserNotFoundException e) {
-            Analytics.logException(e);
             Log.d(TAG, "User not found: ", e);
         }
 

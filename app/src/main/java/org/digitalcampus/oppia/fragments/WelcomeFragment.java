@@ -22,11 +22,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 
-import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.mobile.learning.databinding.FragmentAboutBinding;
+import org.digitalcampus.mobile.learning.BuildConfig;
 import org.digitalcampus.mobile.learning.databinding.FragmentWelcomeBinding;
 import org.digitalcampus.oppia.activity.PrivacyActivity;
 import org.digitalcampus.oppia.activity.WelcomeActivity;
@@ -46,6 +43,9 @@ public class WelcomeFragment extends AppFragment {
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		binding = FragmentWelcomeBinding.inflate(inflater, container, false);
+
+		binding.welcomeRegister.setVisibility(BuildConfig.ALLOW_REGISTER_USER ? View.VISIBLE : View.GONE);
+
 		return binding.getRoot();
 	}
 

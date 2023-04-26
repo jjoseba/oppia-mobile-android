@@ -17,18 +17,24 @@
 
 package org.digitalcampus.oppia.widgets;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.quiz.Quiz;
 import org.digitalcampus.mobile.quiz.model.QuizQuestion;
 import org.digitalcampus.mobile.quiz.model.questiontypes.Description;
 import org.digitalcampus.oppia.activity.CourseActivity;
+import org.digitalcampus.oppia.activity.CourseQuizAttemptsActivity;
 import org.digitalcampus.oppia.adapter.QuizAnswersFeedbackAdapter;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.database.DbHelper;
@@ -40,9 +46,6 @@ import org.digitalcampus.oppia.model.QuizStats;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import androidx.recyclerview.widget.DividerItemDecoration;
-import androidx.recyclerview.widget.RecyclerView;
 
 public class QuizWidget extends AnswerWidget {
 
@@ -96,31 +99,29 @@ public class QuizWidget extends AnswerWidget {
         return QUIZ_AVAILABLE;
     }
 
-    private boolean isUserOverLimitedAttempts(boolean afterAttempt){
-        if (this.quiz.limitAttempts()){
-            //Check if the user has attempted the quiz the max allowed
-            QuizStats qs = attemptsRepository.getQuizAttemptStats(this.getActivity(), activity.getDigest());
-            if (afterAttempt){
-                //If the quiz was just attempted, it is not saved yet, so we added
-                qs.setNumAttempts(qs.getNumAttempts() + 1);
-            }
-            return qs.getNumAttempts() >= quiz.getMaxAttempts();
-        }
-        return false;
+
+
+    @Override
+    String getAnswerWidgetType() {
+        return getString(R.string.quiz);
     }
 
     @Override
-    void showContentUnavailableRationale(int unavailabilityReasonStringResId) {
-        View localContainer = getView();
-        if (localContainer != null){
-            ViewGroup vg = localContainer.findViewById(activity.getActId());
-            if (vg!=null){
-                vg.removeAllViews();
-                vg.addView(View.inflate(getView().getContext(), R.layout.widget_quiz_unavailable, null));
+    protected void showContentUnavailableRationale(String unavailabilityReasonString) {
+        super.showContentUnavailableRationale(unavailabilityReasonString);
 
-                TextView tv = getView().findViewById(R.id.quiz_unavailable);
-                tv.setText(unavailabilityReasonStringResId);
-            }
+        QuizStats quizStats = attemptsRepository.getQuizAttemptStats(getActivity(), course.getCourseId(), activity.getDigest());
+        quizStats.setQuizTitle(activity.getTitle(prefLang));
+        if (quizStats.isAttempted()) {
+            Button button = getView().findViewById(R.id.btn_quiz_unavailable);
+            button.setVisibility(View.VISIBLE);
+            button.setText(R.string.view_your_previous_attempts);
+            button.setOnClickListener(v -> {
+                Intent i = new Intent(getActivity(), CourseQuizAttemptsActivity.class);
+                i.putExtra(QuizStats.TAG, quizStats);
+                i.putExtra(CourseQuizAttemptsActivity.SHOW_ATTEMPT_BUTTON, false);
+                startActivity(i);
+            });
         }
     }
 
@@ -138,7 +139,7 @@ public class QuizWidget extends AnswerWidget {
             ViewGroup info = getView().findViewById(R.id.quiz_stats);
             info.setVisibility(View.VISIBLE);
 
-            QuizStats stats = attemptsRepository.getQuizAttemptStats(getContext(), activity.getDigest());
+            QuizStats stats = attemptsRepository.getQuizAttemptStats(getContext(), course.getCourseId(), activity.getDigest());
             // We take into account the current quiz (not saved yet)
             int numAttempts = stats.getNumAttempts();
             float average = ((stats.getAverageScore() * numAttempts) + quiz.getUserscore()) / (numAttempts + 1);
@@ -147,6 +148,10 @@ public class QuizWidget extends AnswerWidget {
             stats.setUserScore(Math.max(quiz.getUserscore(), stats.getUserScore()));
             stats.setAverageScore(average);
             showStats(info, stats);
+        }
+
+        if (!quiz.mustShowQuizResultsAtEnd()) {
+            getView().findViewById(R.id.recycler_quiz_results_feedback).setVisibility(View.GONE);
         }
     }
 
@@ -193,8 +198,8 @@ public class QuizWidget extends AnswerWidget {
         numQuestions.setText(getString(R.string.widget_quiz_num_questions, quiz.getTotalNoQuestions()));
         thresholdBar.setProgress(quiz.getPassThreshold());
 
-        info.findViewById(R.id.take_quiz_btn).setOnClickListener(view -> showQuestion());
-        QuizStats stats = attemptsRepository.getQuizAttemptStats(getContext(), activity.getDigest());
+        info.findViewById(R.id.take_quiz_btn).setOnClickListener(view -> checkPasswordProtectionAndShowQuestion());
+        QuizStats stats = attemptsRepository.getQuizAttemptStats(getContext(), course.getCourseId(), activity.getDigest());
         showStats(info, stats);
     }
 
@@ -203,11 +208,6 @@ public class QuizWidget extends AnswerWidget {
         TextView baselineText = getView().findViewById(R.id.quiz_results_baseline);
         baselineText.setText(getString(R.string.widget_quiz_baseline_completed));
         baselineText.setVisibility(View.VISIBLE);
-    }
-
-    private float getPercentScore() {
-        quiz.mark(prefLang);
-        return quiz.getUserscore() * 100 / quiz.getMaxscore();
     }
 
 
@@ -245,7 +245,7 @@ public class QuizWidget extends AnswerWidget {
                 qf.setQuestionText(q.getTitle(prefLang));
                 qf.setUserResponse(q.getUserResponses());
                 String feedbackText = q.getFeedback(prefLang);
-                qf.setFeedbackText(feedbackText.replaceAll("&amp;gt;","<"));
+                qf.setFeedbackText(feedbackText.replace("&amp;gt;","<"));
                 quizAnswersFeedback.add(qf);
             }
         }

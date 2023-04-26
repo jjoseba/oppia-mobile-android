@@ -3,18 +3,15 @@ package org.digitalcampus.oppia.adapter;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.RowCourseDownloadBinding;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.model.CourseInstallViewAdapter;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.util.List;
 import java.util.Locale;
@@ -29,10 +26,10 @@ public class DownloadCoursesAdapter extends MultiChoiceRecyclerViewAdapter<Downl
     private OnItemClickListener itemClickListener;
     private String prefLang;
 
-    private String updateDescription;
-    private String installDescription;
-    private String installedDescription;
-    private String cancelDescription;
+    private final String updateDescription;
+    private final String installDescription;
+    private final String installedDescription;
+    private final String cancelDescription;
 
 
     public DownloadCoursesAdapter(Context context, List<CourseInstallViewAdapter> courses) {
@@ -40,7 +37,7 @@ public class DownloadCoursesAdapter extends MultiChoiceRecyclerViewAdapter<Downl
         this.courses = courses;
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        prefLang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+        prefLang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
 
         updateDescription = context.getString(R.string.update);
         installDescription = context.getString(R.string.install);
@@ -62,56 +59,54 @@ public class DownloadCoursesAdapter extends MultiChoiceRecyclerViewAdapter<Downl
         updateViewHolder(viewHolder, position);
         final CourseInstallViewAdapter c = getItemAtPosition(position);
 
-        viewHolder.binding.courseTitle.setText(c.getTitle(prefLang));
         viewHolder.binding.downloadCourseBtn.setVisibility(isMultiChoiceMode ? View.INVISIBLE : View.VISIBLE);
+        updateCourseDescription(viewHolder, c);
+        updateActionButton(viewHolder, c);
+    }
 
-        if (c.isDraft()){
-            viewHolder.binding.courseDraft.setVisibility(View.VISIBLE);
-            viewHolder.binding.courseDraft.setText(context.getString(R.string.course_draft));
-        } else {
-            viewHolder.binding.courseDraft.setVisibility(View.GONE);
-        }
+    private void updateCourseDescription(DownloadCoursesViewHolder viewHolder, CourseInstallViewAdapter course) {
+        viewHolder.binding.courseTitle.setText(course.getTitle(prefLang));
 
-        String desc = c.getDescription(prefLang);
-        if (desc != null){
+        viewHolder.binding.viewCourseStatus.setCourseStatus(course.getStatus());
+
+        String desc = course.getDescription(prefLang);
+        if (desc != null) {
             viewHolder.binding.courseDescription.setVisibility(View.VISIBLE);
             viewHolder.binding.courseDescription.setText(desc);
         } else {
             viewHolder.binding.courseDescription.setVisibility(View.GONE);
         }
 
-        String organisation = c.getOrganisationName();
-        if (!TextUtils.isEmpty(organisation) && !(c.isDownloading() || c.isInstalling())){
+        String organisation = course.getOrganisationName();
+        if (!TextUtilsJava.isEmpty(organisation) && !(course.isDownloading() || course.isInstalling())) {
             viewHolder.binding.labelAuthor.setVisibility(View.VISIBLE);
             viewHolder.binding.courseAuthor.setVisibility(View.VISIBLE);
             viewHolder.binding.courseAuthor.setText(organisation);
-        }
-        else{
+        } else {
             viewHolder.binding.labelAuthor.setVisibility(View.GONE);
             viewHolder.binding.courseAuthor.setVisibility(View.GONE);
         }
+    }
 
-
+    private void updateActionButton(DownloadCoursesViewHolder viewHolder, CourseInstallViewAdapter course) {
         int actionBtnImageRes;
-        if (c.isDownloading() || c.isInstalling()){
-            actionBtnImageRes =  R.drawable.ic_action_cancel;
+        if (course.isDownloading() || course.isInstalling()) {
+            actionBtnImageRes = R.drawable.ic_action_cancel;
             viewHolder.binding.downloadCourseBtn.setContentDescription(cancelDescription);
-            viewHolder.binding.downloadCourseBtn.setEnabled(!c.isInstalling());
+            viewHolder.binding.downloadCourseBtn.setEnabled(!course.isInstalling());
 
             viewHolder.binding.downloadProgress.setVisibility(View.VISIBLE);
-            if (c.getProgress()>0){
+            if (course.getProgress() > 0) {
                 viewHolder.binding.downloadProgress.setIndeterminate(false);
-                viewHolder.binding.downloadProgress.setProgress(c.getProgress());
-            }
-            else {
+                viewHolder.binding.downloadProgress.setProgress(course.getProgress());
+            } else {
                 viewHolder.binding.downloadProgress.setIndeterminate(true);
             }
-        }
-        else{
+        } else {
             viewHolder.binding.downloadProgress.setVisibility(View.GONE);
 
-            if(c.isInstalled()){
-                if(c.isToUpdate()){
+            if (course.isInstalled()) {
+                if (course.isToUpdate()) {
                     actionBtnImageRes = R.drawable.ic_action_refresh;
                     viewHolder.binding.downloadCourseBtn.setContentDescription(updateDescription);
                     viewHolder.binding.downloadCourseBtn.setEnabled(true);

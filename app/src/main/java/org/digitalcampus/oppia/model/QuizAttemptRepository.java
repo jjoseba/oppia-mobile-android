@@ -23,13 +23,13 @@ public class QuizAttemptRepository {
         DbHelper db = DbHelper.getInstance(ctx);
         long userId = db.getUserId(SessionManager.getUsername(ctx));
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+        String lang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
         return db.getGlobalQuizAttempts(userId, lang);
     }
 
-    public QuizStats getQuizAttemptStats(Context ctx, String digest){
+    public QuizStats getQuizAttemptStats(Context ctx, int courseId, String digest){
         DbHelper db = DbHelper.getInstance(ctx);
         long userId = db.getUserId(SessionManager.getUsername(ctx));
-        return db.getQuizAttempt(digest, userId);
+        return db.getQuizAttemptStats(digest, courseId, userId);
     }
 }

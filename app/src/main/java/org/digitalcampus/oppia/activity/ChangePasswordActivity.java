@@ -2,7 +2,6 @@ package org.digitalcampus.oppia.activity;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
-import android.text.TextUtils;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityChangePasswordBinding;
@@ -10,7 +9,7 @@ import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.model.User;
 import org.digitalcampus.oppia.task.ChangePasswordTask;
-import org.digitalcampus.oppia.task.UpdateProfileTask;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import javax.inject.Inject;
 
@@ -32,18 +31,14 @@ public class ChangePasswordActivity extends AppActivity implements ChangePasswor
 
         getAppComponent().inject(this);
 
-        binding.btnSaveNewPassword.setOnClickListener(v -> {
-            checkAndChangePasswords();
-        });
+        binding.btnSaveNewPassword.setOnClickListener(v -> checkAndChangePasswords());
 
     }
 
     private void showChangePasswordSuccessDialog() {
         new AlertDialog.Builder(this)
                 .setMessage(R.string.change_password_success)
-                .setPositiveButton(R.string.ok, (dialog, which) -> {
-                    finish();
-                }).show();
+                .setPositiveButton(R.string.ok, (dialog, which) -> finish()).show();
     }
 
     @Override
@@ -66,7 +61,7 @@ public class ChangePasswordActivity extends AppActivity implements ChangePasswor
             return;
         }
 
-        if (!TextUtils.equals(pass1, pass2)) {
+        if (!TextUtilsJava.equals(pass1, pass2)) {
             binding.fieldPasswordRepeat.setError(getString(R.string.error_register_password_no_match));
             return;
         }

@@ -11,7 +11,6 @@
     <string name="about_not_logged_in">غير متصل بالانترنت</string>
 
     <string name="menu_download">تحميل الدروس</string>
-    <string name="menu_language">اختيار اللغة</string>
     <string name="menu_settings">الإعدادات</string>
     <string name="menu_about">عن طبشورة أوبيا</string>
     <string name="menu_help">المساعدة</string>
@@ -89,9 +88,9 @@
 <string name="more_courses">تحميل المزيد من الدروس</string>
 
 <string name="prefAdvanced">الإعدادات المتقدمة</string>
-<string name="prefBackgroudDataConnect">رصد مراقبة الأنشطة في الخلفية</string>
-<string name="prefBackgroudDataConnect_summary">أرسل سجل الأنشطة حتى إذا كان التطبيق في وضع توقف مؤقت</string>
-<string name="prefLanguage">اللغة المفضلة</string>
+<string name="prefBackgroundDataConnect">رصد مراقبة الأنشطة في الخلفية</string>
+<string name="prefBackgroundDataConnect_summary">أرسل سجل الأنشطة حتى إذا كان التطبيق في وضع توقف مؤقت</string>
+<string name="prefContentLanguage">لغة المحتوى المفضلة</string>
 <string name="prefHighlightCompleted">إبراز الأنشطة المنتهية</string>
 <string name="prefServer">الخادم</string>
 <string name="prefServerTimeoutConnection">مهلة الإتصال</string>
@@ -104,7 +103,6 @@
 <string name="prefUserHint">للقراءة فقط</string>
 <string name="prefLogoutEnabled">السماح بتسجيل الخروج من الصفحة الرئيسة</string>
 <string name="prefDeleteCourseEnabled">السماح بإلغاء الدرس</string>
-<string name="prefDownloadViaCellularEnabled">تنزيل ملفات الوسائط عبر شبكة الهاتف الخليوي</string>
 
     <!-- Strings relative to Storage -->
 <string name="prefStorageLocation">مساحة التخزين</string>
@@ -277,7 +275,7 @@
 <string name="reset_process">أعد تعيين كلمة السر</string>
 <string name="reset_password_complete">تمت إعادة تعيين كلمة السر بنجاح رجاء مراجعة البريد الالكتروني للحصول على كلمة السر الجديدة</string>
 
-<string name="change_language">تغيير اللغة</string>
+<string name="change_content_language">تغيير اللغة</string>
 
 <string name="course_draft">(مسودة)</string>
 

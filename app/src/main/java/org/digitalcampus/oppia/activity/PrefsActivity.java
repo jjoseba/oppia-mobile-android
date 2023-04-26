@@ -21,7 +21,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -36,6 +35,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityPreferencesBinding;
 import org.digitalcampus.oppia.fragments.prefs.BasePreferenceFragment;
+import org.digitalcampus.oppia.fragments.prefs.DisplayPrefsFragment;
 import org.digitalcampus.oppia.fragments.prefs.MainPreferencesFragment;
 import org.digitalcampus.oppia.fragments.prefs.NotificationsPrefsFragment;
 import org.digitalcampus.oppia.fragments.prefs.PreferenceChangedCallback;
@@ -47,6 +47,7 @@ import org.digitalcampus.oppia.service.CoursesCompletionReminderWorkerManager;
 import org.digitalcampus.oppia.task.ChangeStorageOptionTask;
 import org.digitalcampus.oppia.task.FetchServerInfoTask;
 import org.digitalcampus.oppia.task.result.BasicResult;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.UIUtils;
 import org.digitalcampus.oppia.utils.storage.Storage;
 import org.digitalcampus.oppia.utils.ui.OppiaNotificationUtils;
@@ -92,7 +93,8 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
      * Start personal prefs - move these to UserProps table
      */
     public static final String PREF_PHONE_NO = "prefPhoneNo";
-    public static final String PREF_LANGUAGE = "prefLanguage";
+    public static final String PREF_CONTENT_LANGUAGE = "prefLanguage";
+    public static final String PREF_INTERFACE_LANGUAGE = "prefInterfaceLanguage";
     public static final String PREF_SHOW_SCHEDULE_REMINDERS = "prefShowScheduleReminders";
     public static final String PREF_NO_SCHEDULE_REMINDERS = "prefNoScheduleReminders";
     public static final String PREF_SHOW_COURSE_DESC = "prefShowCourseDescription";
@@ -119,7 +121,6 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
     public static final String PREF_DOWNLOAD_ENABLED = "prefDownloadEnabled";
     public static final String PREF_CHANGE_LANGUAGE_ENABLED = "prefChangeLanguageEnabled";
     public static final String PREF_DELETE_COURSE_ENABLED = "prefDeleteCourseEnabled";
-    public static final String PREF_DOWNLOAD_VIA_CELLULAR_ENABLED = "prefDownloadViaCellularEnabled";
 
     public static final String PREF_LAST_LEADERBOARD_FETCH = "prefLastLeaderboardFetch";
 
@@ -147,6 +148,8 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
     public static final String PREF_NEW_COURSES_LIST_NOTIFIED = "prefNewCoursesListNotified";
     public static final String PREF_LAST_NEW_COURSE_SEEN_TIMESTAMP = "prefNewCourseTimestamp";
 
+    public static final String PREF_FULL_ACTIVITY_EXPORT = "prefFullActivityExport";
+    public static final String PREF_FLUSH_APP_CACHE = "prefFlushAppCache";
 
     //Privacy tracking preferences
     public static final String PREF_ANALYTICS_INITIAL_PROMPT = "prefAnalyticsInitialPrompt";
@@ -158,13 +161,14 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
     public static final String PREF_COURSES_REMINDER_TIME = "prefCoursesReminderTime";
     public static final String PREF_REMINDERS_LOG = "prefRemindersLog";
 
+    public static final String PREF_UPDATE_ACTIVITY_ON_LOGIN = "prefUpdateActivityOnLogin";
+
     private PreferenceChangedCallback currentPrefScreen;
 
     @Inject
     CoursesRepository coursesRepository;
     private FetchServerInfoTask fetchServerInfoTask;
     private boolean forzeGoToLoginScreen;
-    private ActivityPreferencesBinding binding;
 
     @Override
     public void onStart() {
@@ -175,7 +179,7 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityPreferencesBinding.inflate(LayoutInflater.from(this));
+        org.digitalcampus.mobile.learning.databinding.ActivityPreferencesBinding binding = ActivityPreferencesBinding.inflate(LayoutInflater.from(this));
         setContentView(binding.getRoot());
         getAppComponent().inject(this);
 
@@ -290,7 +294,7 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
             checkAdminProtection(sharedPreferences);
         } else if (key.equalsIgnoreCase(PREF_ADMIN_PASSWORD)) {
             String newPassword = sharedPreferences.getString(PrefsActivity.PREF_ADMIN_PASSWORD, "");
-            if (TextUtils.equals(newPassword, "")) {
+            if (TextUtilsJava.equals(newPassword, "")) {
                 //If the user introduced an empty password, disable the password protection
                 disableAdminProtection(sharedPreferences);
             }
@@ -346,15 +350,9 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
 
         Log.d(TAG, "Storage option selected: " + storageOption);
 
-        if (storageOption.equals(Storage.getStorageStrategy().getStorageType())) {
-            // Same option. No need to move files
-            return;
-        } else {
+        if (!storageOption.equals(Storage.getStorageStrategy().getStorageType())) {
             executeChangeStorageTask(storageOption);
         }
-
-
-
     }
 
     private void checkAdminProtection(SharedPreferences sharedPreferences) {
@@ -434,7 +432,7 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
         }
 
         //Finally, to handle the possibility that is in an inconsistent state
-        if (!TextUtils.equals(storageOption, STORAGE_OPTION_INTERNAL)) {
+        if (!TextUtilsJava.equals(storageOption, STORAGE_OPTION_INTERNAL)) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString(PrefsActivity.PREF_STORAGE_OPTION, STORAGE_OPTION_EXTERNAL).apply();
         }
@@ -469,7 +467,7 @@ public class PrefsActivity extends AppActivity implements SharedPreferences.OnSh
         Bundle args = new Bundle();
         args.putString(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT, caller.getTag());
         if (pref.getKey().equals(PrefsActivity.PREF_DISPLAY_SCREEN)) {
-            args.putSerializable("langs", getLanguagesCourses());
+            args.putSerializable(DisplayPrefsFragment.ARG_CONTENT_LANGS, getLanguagesCourses());
             Log.d(TAG, "Langs added!");
         }
         fragment.setArguments(args);

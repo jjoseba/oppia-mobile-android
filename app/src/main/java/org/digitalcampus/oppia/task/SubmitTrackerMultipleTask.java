@@ -142,21 +142,23 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Void, Integer, Ent
             //We don't need the current user to send this, just some with a valid apiKey
             User user = db.getOneRegisteredUser();
 
-            if (!user.isOfflineRegister()){
+            if (!user.isOfflineRegister()) {
                 boolean success = sendTrackers(user, dataToSend, true, result);
                 result.setSuccess(success);
-                if (!success){
+                if (!success) {
                     result.getEntityList().add(activityLog.getName());
                 }
-                if (success){
+                if (success) {
                     Log.d(TAG, "Success sending " + activityLog.getName());
                     // If the logs were sent successfully, we can delete the file
                     FileUtils.deleteFile(activityLog);
                 }
             }
 
-        } catch (IOException | UserNotFoundException e) {
+        } catch (IOException e) {
             Analytics.logException(e);
+            result.setSuccess(false);
+        } catch (UserNotFoundException e) {
             result.setSuccess(false);
         }
 
@@ -176,23 +178,23 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Void, Integer, Ent
 
             Response response = client.newCall(request).execute();
             if (response.isSuccessful()) {
-
                 if (!isRaw){
-                    JSONObject jsonResp = new JSONObject(response.body().string());
-                    db.updateUserBadges(user.getUserId(), jsonResp.getInt("badges"));
-
-                    Editor editor = prefs.edit();
                     try {
+                        JSONObject jsonResp = new JSONObject(response.body().string());
+                        db.updateUserBadges(user.getUserId(), jsonResp.getInt("badges"));
+
+                        Editor editor = prefs.edit();
                         editor.putBoolean(PrefsActivity.PREF_SCORING_ENABLED, jsonResp.getBoolean("scoring"));
                         editor.putBoolean(PrefsActivity.PREF_BADGING_ENABLED, jsonResp.getBoolean("badging"));
+                        editor.apply();
+
+                        new MetaDataUtils(ctx).saveMetaData(jsonResp);
+
                     } catch (JSONException e) {
                         Log.d(TAG, JSON_EXCEPTION_MESSAGE, e);
+                        Analytics.logException(e);
                     }
-                    editor.apply();
-
-                    saveMetadata(jsonResp);
                 }
-
                 return true;
 
             } else {
@@ -200,16 +202,18 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Void, Integer, Ent
                     // submitted but invalid digest - returned 400 Bad Request -
                     // so record as submitted so doesn't keep trying
                     return true; // OPPIA-217
-                } else{
-                    Log.d(TAG, "Error sending trackers:" + response.code());
-                    Log.d(TAG, "Msg:" + response.body().string());
-                    if (response.code() == 401) {
-                        //The apiKey of this user is invalid
-                        SessionManager.setUserApiKeyValid(user, false);
-                        //We don't process more of this user trackers
-                    }
-                    return false;
                 }
+
+                Log.d(TAG, "Error sending trackers:" + response.code());
+                Log.d(TAG, "Msg:" + response.body().string());
+
+                if (response.code() == 401) {
+                    //The apiKey of this user is invalid
+                    SessionManager.setUserApiKeyValid(user, false);
+                    //We don't process more of this user trackers
+                }
+                return false;
+
             }
         } catch (UnsupportedEncodingException e) {
             Analytics.logException(e);
@@ -218,26 +222,11 @@ public class SubmitTrackerMultipleTask extends APIRequestTask<Void, Integer, Ent
             result.setResultMessage(ctx.getString(R.string.error_connection_timeout));
             return false;
         } catch (IOException e) {
-            Analytics.logException(e);
             result.setResultMessage(ctx.getString(R.string.error_connection));
             return false;
-        } catch (JSONException e) {
-            Log.d(TAG, JSON_EXCEPTION_MESSAGE, e);
-            Analytics.logException(e);
-            return false;
         }
     }
-
-    private void saveMetadata(JSONObject jsonResp) {
-        try {
-            JSONObject metadata = jsonResp.getJSONObject("metadata");
-            MetaDataUtils mu = new MetaDataUtils(ctx);
-            mu.saveMetaData(metadata, prefs);
-        } catch (JSONException e) {
-            Log.d(TAG, JSON_EXCEPTION_MESSAGE, e);
-        }
-    }
-
+    
     private List<File> getActivityLogsToSend(){
         ArrayList<File> files = new ArrayList<>();
         File activityFolder = new File(Storage.getActivityPath(ctx));

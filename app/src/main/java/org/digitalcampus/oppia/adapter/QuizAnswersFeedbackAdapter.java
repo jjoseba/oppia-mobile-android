@@ -2,7 +2,6 @@ package org.digitalcampus.oppia.adapter;
 
 
 import android.content.Context;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +10,7 @@ import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.RowWidgetQuizFeedbackBinding;
 import org.digitalcampus.mobile.quiz.Quiz;
 import org.digitalcampus.oppia.model.QuizAnswerFeedback;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.UIUtils;
 
 import java.util.List;
@@ -54,7 +54,7 @@ public class QuizAnswersFeedbackAdapter extends RecyclerView.Adapter<QuizAnswers
         }
 
         viewHolder.binding.quizQuestionText.setText(UIUtils.getFromHtmlAndTrim(qf.getQuestionText()));
-        if (qf.isSurvey() && TextUtils.isEmpty(userResponseText)){
+        if (qf.isSurvey() && TextUtilsJava.isEmpty(userResponseText)){
             viewHolder.binding.quizQuestionUserResponseTitle.setText(R.string.widget_quiz_feedback_response_skipped);
             viewHolder.binding.quizQuestionUserResponseText.setVisibility(View.GONE);
         }
@@ -81,11 +81,15 @@ public class QuizAnswersFeedbackAdapter extends RecyclerView.Adapter<QuizAnswers
             viewHolder.binding.quizQuestionFeedbackImage.setVisibility(View.GONE);
         }else {
             viewHolder.binding.quizQuestionFeedbackImage.setVisibility(View.VISIBLE);
-            viewHolder.binding.quizQuestionFeedbackImage.setImageResource(
-                    (qf.getScore() >= Quiz.QUIZ_QUESTION_PASS_THRESHOLD)?
-                            R.drawable.quiz_tick:
-                            R.drawable.quiz_cross
-            );
+            int icon;
+            if (qf.getScore() >= Quiz.QUIZ_QUESTION_PASS_THRESHOLD) {
+                icon = R.drawable.quiz_tick;
+            } else if (qf.getScore() > 0) {
+                icon = R.drawable.quiz_partially_correct;
+            } else {
+                icon = R.drawable.quiz_cross;
+            }
+            viewHolder.binding.quizQuestionFeedbackImage.setImageResource(icon);
         }
 
 

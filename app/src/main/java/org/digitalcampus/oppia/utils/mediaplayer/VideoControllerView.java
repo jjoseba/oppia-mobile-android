@@ -30,11 +30,8 @@ import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.TextView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.MediaControllerBinding;
@@ -119,14 +116,6 @@ public class VideoControllerView extends FrameLayout {
         this(context, true);
         Log.i(TAG, TAG);
     }
-
-//    @Override
-//    public void onFinishInflate() {
-//        if (mRoot != null) {
-//            initControllerView(mRoot);
-//        }
-//        super.onFinishInflate();
-//    }
 
     public void setMediaPlayer(MediaPlayerControl player) {
         mPlayer = player;

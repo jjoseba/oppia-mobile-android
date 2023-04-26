@@ -11,8 +11,10 @@ import org.digitalcampus.oppia.activity.EditProfileActivity;
 import org.digitalcampus.oppia.activity.MainActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.activity.QuizAttemptActivity;
+import org.digitalcampus.oppia.activity.StartUpActivity;
 import org.digitalcampus.oppia.activity.TagSelectActivity;
 import org.digitalcampus.oppia.activity.ViewDigestActivity;
+import org.digitalcampus.oppia.activity.WelcomeActivity;
 import org.digitalcampus.oppia.application.AdminSecurityManager;
 import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.database.DBDataMigration;
@@ -29,10 +31,12 @@ import org.digitalcampus.oppia.fragments.RegisterFragment;
 import org.digitalcampus.oppia.fragments.RememberUsernameFragment;
 import org.digitalcampus.oppia.fragments.ResetPasswordFragment;
 import org.digitalcampus.oppia.fragments.prefs.AdvancedPrefsFragment;
+import org.digitalcampus.oppia.fragments.prefs.DisplayPrefsFragment;
 import org.digitalcampus.oppia.fragments.prefs.NotificationsPrefsFragment;
 import org.digitalcampus.oppia.model.User;
 import org.digitalcampus.oppia.service.CoursesChecksWorkerManager;
 import org.digitalcampus.oppia.service.CoursesCompletionReminderWorkerManager;
+import org.digitalcampus.oppia.service.UpdateUserProfileWorkerManager;
 import org.digitalcampus.oppia.widgets.AnswerWidget;
 
 import javax.inject.Singleton;
@@ -64,9 +68,12 @@ public interface AppComponent {
     void inject(AppFragment fragment);
     void inject(GlobalQuizAttemptsFragment fragment);
     void inject(RegisterFragment fragment);
+    void inject(DisplayPrefsFragment fragment);
     void inject(App app);
     void inject(ChangePasswordActivity activity);
     void inject(QuizAttemptActivity activity);
+    void inject(WelcomeActivity activity);
+    void inject(StartUpActivity activity);
 
     void inject(AdvancedPrefsFragment advancedPrefsFragment);
     void inject(NotificationsPrefsFragment notificationsPrefsFragment);
@@ -84,4 +91,5 @@ public interface AppComponent {
 
     void inject(DBDataMigration dbDataMigration);
 
+    void inject(UpdateUserProfileWorkerManager updateUserProfileWorkerManager);
 }

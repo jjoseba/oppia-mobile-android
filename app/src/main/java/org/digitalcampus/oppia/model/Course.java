@@ -27,6 +27,7 @@ import org.digitalcampus.oppia.model.coursecomplete.AllActivities;
 import org.digitalcampus.oppia.model.coursecomplete.AllQuizzes;
 import org.digitalcampus.oppia.model.coursecomplete.AllQuizzesPlusPercent;
 import org.digitalcampus.oppia.model.coursecomplete.FinalQuiz;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.storage.Storage;
 
 import java.io.File;
@@ -47,14 +48,33 @@ public class Course extends MultiLangInfoModel implements Serializable {
 
     public static final String TAG = Course.class.getSimpleName();
 
-    public final static String COURSE_COMPLETE_ALL_ACTIVITIES = "all_activities";
-    public final static String COURSE_COMPLETE_ALL_QUIZZES = "all_quizzes";
-    public final static String COURSE_COMPLETE_FINAL_QUIZ = "final_quiz";
-    public final static String COURSE_COMPLETE_ALL_QUIZZES_PLUS_PERCENT = "all_quizzes_plus_percent";
+    public static final String COURSE_COMPLETE_ALL_ACTIVITIES = "all_activities";
+    public static final String COURSE_COMPLETE_ALL_QUIZZES = "all_quizzes";
+    public static final String COURSE_COMPLETE_FINAL_QUIZ = "final_quiz";
+    public static final String COURSE_COMPLETE_ALL_QUIZZES_PLUS_PERCENT = "all_quizzes_plus_percent";
+
+    public static final String STATUS_LIVE = "live";
+    public static final String STATUS_DRAFT = "draft";
+    public static final String STATUS_ARCHIVED = "archived";
+    public static final String STATUS_NEW_DOWNLOADS_DISABLED = "new_downloads_disabled";
+    public static final String STATUS_READ_ONLY = "read_only";
+
+    public static final String JSON_PROPERTY_DESCRIPTION = "description";
+    public static final String JSON_PROPERTY_TITLE = "title";
+    public static final String JSON_PROPERTY_SHORTNAME = "shortname";
+    public static final String JSON_PROPERTY_VERSION = "version";
+    public static final String JSON_PROPERTY_URL = "url";
+    public static final String JSON_PROPERTY_AUTHOR = "author";
+    public static final String JSON_PROPERTY_USERNAME = "username";
+    public static final String JSON_PROPERTY_ORGANISATION = "organisation";
+    public static final String JSON_PROPERTY_STATUS = "status";
+    public static final String JSON_PROPERTY_RESTRICTED = "restricted";
+    public static final String JSON_PROPERTY_RESTRICTED_COHORTS = "cohorts";
 
     private int courseId;
     private String shortname;
     private Double versionId;
+    private String status = STATUS_LIVE;
     private boolean installed;
     private boolean toUpdate;
     private boolean toDelete;
@@ -62,12 +82,13 @@ public class Course extends MultiLangInfoModel implements Serializable {
     private String imageFile;
     private List<Media> media = new ArrayList<>();
     private List<CourseMetaPage> metaPages = new ArrayList<>();
-    private boolean isDraft = false;
     private int priority = 0;
     private int noActivities = 0;
     private int noActivitiesCompleted = 0;
     private String sequencingMode = SEQUENCING_MODE_NONE;
     private List<GamificationEvent> gamificationEvents = new ArrayList<>();
+    private boolean restricted = false;
+    private List<Integer> restrictedCohorts = new ArrayList<>();
 
     private String root;
 
@@ -194,14 +215,6 @@ public class Course extends MultiLangInfoModel implements Serializable {
         return null;
     }
 
-    public boolean isDraft() {
-        return isDraft;
-    }
-
-    public void setDraft(boolean isDraft) {
-        this.isDraft = isDraft;
-    }
-
     public int getPriority() {
         return priority;
     }
@@ -272,5 +285,33 @@ public class Course extends MultiLangInfoModel implements Serializable {
             default:
                 return false;
         }
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public boolean hasStatus(String status) {
+        return TextUtilsJava.equals(this.status, status);
+    }
+
+    public void setRestricted(boolean restricted) {
+        this.restricted = restricted;
+    }
+
+    public boolean isRestricted() {
+        return restricted;
+    }
+
+    public void setRestrictedCohorts(List<Integer> cohorts){
+        this.restrictedCohorts = cohorts;
+    }
+
+    public List<Integer> getRestrictedCohorts(){
+        return restrictedCohorts;
     }
 }

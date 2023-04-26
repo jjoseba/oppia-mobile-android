@@ -29,11 +29,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.WidgetQuizBinding;
@@ -52,9 +56,12 @@ import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.Course;
 import org.digitalcampus.oppia.model.QuizAttemptRepository;
+import org.digitalcampus.oppia.model.QuizStats;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.UIUtils;
 import org.digitalcampus.oppia.utils.resources.ExternalResourceOpener;
 import org.digitalcampus.oppia.utils.ui.ProgressBarAnimator;
+import org.digitalcampus.oppia.utils.ui.SimpleAnimator;
 import org.digitalcampus.oppia.widgets.quiz.DescriptionWidget;
 import org.digitalcampus.oppia.widgets.quiz.EssayWidget;
 import org.digitalcampus.oppia.widgets.quiz.MatchingWidget;
@@ -67,22 +74,26 @@ import org.digitalcampus.oppia.widgets.quiz.ShortAnswerWidget;
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.fragment.app.FragmentActivity;
-
 public abstract class AnswerWidget extends BaseWidget {
 
     public static final String TAG = AnswerWidget.class.getSimpleName();
+    protected static final String PROPERTY_QUIZ = "quiz";
+    protected static final String PROPERTY_ON_RESULTS_PAGE = "OnResultsPage";
+    protected static final String PROPERTY_ATTEMPT_SAVED = "attemptSaved";
+    protected static final String PROPERTY_INITIAL_INFO_SHOWN = "initialInfoShown";
+    protected static final String PROPERTY_LANG = "quiz_lang";
+
     static final int QUIZ_AVAILABLE = -1;
     private static final int PROGRESS_ANIM_DURATION = 600;
     protected Quiz quiz;
     private QuestionWidget currentQuestion;
+    private String previousLang;
     private String contents;
 
     boolean isOnResultsPage = false;
@@ -94,7 +105,8 @@ public abstract class AnswerWidget extends BaseWidget {
 
     private ProgressBarAnimator barAnim;
 
-    @Inject QuizAttemptRepository attemptsRepository;
+    @Inject
+    QuizAttemptRepository attemptsRepository;
     protected WidgetQuizBinding binding;
     private ViewGroup container;
 
@@ -103,13 +115,21 @@ public abstract class AnswerWidget extends BaseWidget {
     }
 
     abstract int getContentAvailability(boolean afterAttempt);
-    abstract void showContentUnavailableRationale(int unavailabilityReasonStringResId);
+
+    abstract String getAnswerWidgetType();
+
     abstract String getFinishButtonLabel();
+
     abstract void showBaselineResultMessage();
+
     abstract void saveAttemptTracker();
+
     abstract void showAnswersFeedback();
+
     abstract boolean shouldShowInitialInfo();
+
     abstract void loadInitialInfo(ViewGroup infoContainer);
+
     abstract void showResultsInfo();
 
     @SuppressWarnings("unchecked")
@@ -117,7 +137,7 @@ public abstract class AnswerWidget extends BaseWidget {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         binding = WidgetQuizBinding.inflate(inflater, container, false);
-        
+
         this.container = container;
         course = (Course) getArguments().getSerializable(Course.TAG);
         activity = ((Activity) getArguments().getSerializable(Activity.TAG));
@@ -127,7 +147,7 @@ public abstract class AnswerWidget extends BaseWidget {
 
         setIsBaseline(getArguments().getBoolean(CourseActivity.BASELINE_TAG));
         binding.getRoot().setId(activity.getActId());
-        if ((savedInstanceState != null) && (savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG) != null)){
+        if ((savedInstanceState != null) && (savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG) != null)) {
             setWidgetConfig((HashMap<String, Object>) savedInstanceState.getSerializable(BaseWidget.WIDGET_CONFIG));
         }
 
@@ -147,7 +167,7 @@ public abstract class AnswerWidget extends BaseWidget {
         loadContent();
     }
 
-    private void fetchViews(){
+    private void fetchViews() {
         this.barAnim = new ProgressBarAnimator(binding.progressQuiz);
         this.barAnim.setAnimDuration(PROGRESS_ANIM_DURATION);
         this.binding.questionImage.setVisibility(View.GONE);
@@ -155,17 +175,17 @@ public abstract class AnswerWidget extends BaseWidget {
     }
 
     @Override
-    public void onResume(){
+    public void onResume() {
         super.onResume();
         loadContent();
     }
 
-    private void loadContent(){
+    private void loadContent() {
         if (this.quiz == null) {
             Quiz loadedQuiz = new Quiz();
             boolean loadSuccess = loadedQuiz.load(contents, prefLang);
-            if (!loadSuccess){
-                if (!loadingQuizErrorDisplayed){
+            if (!loadSuccess) {
+                if (!loadingQuizErrorDisplayed) {
                     showLoadingError();
                 }
                 return;
@@ -173,18 +193,30 @@ public abstract class AnswerWidget extends BaseWidget {
             quiz = loadedQuiz;
         }
 
+        if (previousLang != null && !previousLang.equalsIgnoreCase(prefLang)){
+            Log.d(TAG, "Quiz lang changed, updating responses!");
+            quiz.updateResponsesAfterLanguageChange(previousLang, prefLang);
+            previousLang = prefLang;
+        }
+
         if (this.isOnResultsPage) {
             showResults();
             return;
         }
 
-        int contentAvailability = getContentAvailability(false);
-        if (contentAvailability != QUIZ_AVAILABLE){
-            showContentUnavailableRationale(contentAvailability);
+        if (course.hasStatus(Course.STATUS_READ_ONLY)) {
+            showContentUnavailableRationale(getString(R.string.read_only_answer_unavailable_message,
+                    getAnswerWidgetType().toLowerCase(Locale.ROOT)));
             return;
         }
 
-        if (!initialInfoShown && shouldShowInitialInfo()){
+        int contentAvailability = getContentAvailability(false);
+        if (contentAvailability != QUIZ_AVAILABLE) {
+            showContentUnavailableRationale(getString(contentAvailability));
+            return;
+        }
+
+        if (quiz.getCurrentQuestionNo() <= 1 && !initialInfoShown && shouldShowInitialInfo()) {
             loadInitialInfo(binding.initialInfoContainer);
             binding.initialInfoContainer.setVisibility(View.VISIBLE);
             return;
@@ -194,11 +226,39 @@ public abstract class AnswerWidget extends BaseWidget {
         this.showQuestion();
     }
 
-    private void showLoadingError() {
+    @CallSuper
+    protected void showContentUnavailableRationale(String unavailabilityReasonString) {
         View localContainer = getView();
         if (localContainer != null){
             ViewGroup vg = localContainer.findViewById(activity.getActId());
             if (vg!=null){
+                vg.removeAllViews();
+                vg.addView(View.inflate(getView().getContext(), R.layout.widget_quiz_unavailable, null));
+
+                TextView tv = getView().findViewById(R.id.quiz_unavailable);
+                tv.setText(unavailabilityReasonString);
+            }
+        }
+    }
+
+    protected boolean isUserOverLimitedAttempts(boolean afterAttempt){
+        if (this.quiz.limitAttempts()){
+            //Check if the user has attempted the quiz the max allowed
+            QuizStats qs = attemptsRepository.getQuizAttemptStats(this.getActivity(), course.getCourseId(), activity.getDigest());
+            if (afterAttempt){
+                //If the quiz was just attempted, it is not saved yet, so we added
+                qs.setNumAttempts(qs.getNumAttempts() + 1);
+            }
+            return qs.getNumAttempts() >= quiz.getMaxAttempts();
+        }
+        return false;
+    }
+
+    private void showLoadingError() {
+        View localContainer = getView();
+        if (localContainer != null) {
+            ViewGroup vg = localContainer.findViewById(activity.getActId());
+            if (vg != null) {
                 vg.removeAllViews();
                 vg.addView(View.inflate(getView().getContext(), R.layout.widget_quiz_unavailable, null));
 
@@ -239,7 +299,7 @@ public abstract class AnswerWidget extends BaseWidget {
             ImageView iv = getView().findViewById(R.id.question_image_image);
             iv.setImageBitmap(myBitmap);
             iv.setTag(file);
-            if (q.getProp("media") == null){
+            if (q.getProp("media") == null) {
                 OnImageClickListener oicl = new OnImageClickListener(super.getActivity());
                 iv.setOnClickListener(oicl);
                 TextView tv = getView().findViewById(R.id.question_image_caption);
@@ -277,15 +337,39 @@ public abstract class AnswerWidget extends BaseWidget {
         this.setNav();
     }
 
+    protected void checkPasswordProtectionAndShowQuestion() {
+        if (!quiz.isPasswordProtected()) {
+            showQuestion();
+        } else {
+            ViewGroup infoContainer = binding.initialInfoContainer;
+            infoContainer.removeAllViews();
+            ViewGroup password_view = (ViewGroup) View.inflate(infoContainer.getContext(), R.layout.view_activity_password, infoContainer);
+            EditText passwordET = password_view.findViewById(R.id.activity_password_field);
+
+            password_view.findViewById(R.id.submit_activity_password).setOnClickListener(view -> {
+                String password = passwordET.getText().toString();
+                if (TextUtilsJava.equals(password, quiz.getPassword())) {
+                    showQuestion();
+                }
+                else{
+                    View passwordError = password_view.findViewById(R.id.activity_password_error);
+                    passwordError.setVisibility(View.VISIBLE);
+                    SimpleAnimator.fade(passwordError, SimpleAnimator.FADE_IN);
+                    passwordET.setText("");
+                }
+            });
+        }
+    }
+
     private String stripAudioFromText(QuizQuestion q) {
         String questionText = q.getTitle(prefLang);
         Pattern p = Pattern.compile("[a-zA-Z0-9\\-_]+\\.mp3");
         Matcher m = p.matcher(questionText);
-        if (m.find()){
+        if (m.find()) {
             final String mp3filename = m.group();
             questionText = questionText.replace(mp3filename, "");
             File file = new File(course.getLocation() + "resources/" + mp3filename);
-            if (!file.exists()){
+            if (!file.exists()) {
                 binding.playAudioBtn.setVisibility(View.GONE);
                 return questionText;
             }
@@ -294,7 +378,7 @@ public abstract class AnswerWidget extends BaseWidget {
 
             binding.playAudioBtn.setVisibility(View.VISIBLE);
             binding.playAudioBtn.setOnClickListener(v -> {
-                if ((mp != null) && mp.isPlaying() ) {
+                if ((mp != null) && mp.isPlaying()) {
                     mp.stop();
                     mp.release();
                     mp = null;
@@ -302,8 +386,7 @@ public abstract class AnswerWidget extends BaseWidget {
                 mp = MediaPlayer.create(getContext(), mp3Uri);
                 mp.start();
             });
-        }
-        else{
+        } else {
             binding.playAudioBtn.setVisibility(View.GONE);
         }
         return questionText;
@@ -329,14 +412,14 @@ public abstract class AnswerWidget extends BaseWidget {
 
         binding.mquizNextBtn.setOnClickListener(nextBtnClickListener());
         // set label on next button
-        if (quiz.hasNext()) {
-            binding.mquizNextBtn.setText(getString(R.string.widget_quiz_next));
-        } else {
+        if (quiz.getCurrentQuestionNo() == quiz.getTotalNoQuestions()) {
             binding.mquizNextBtn.setText(getFinishButtonLabel());
+        } else {
+            binding.mquizNextBtn.setText(getString(R.string.widget_quiz_next));
         }
     }
 
-    private View.OnClickListener nextBtnClickListener(){
+    private View.OnClickListener nextBtnClickListener() {
         return v -> {
             // save answer
             if (saveAnswer()) {
@@ -364,11 +447,11 @@ public abstract class AnswerWidget extends BaseWidget {
         };
     }
 
-    private View.OnClickListener getCloseBtnListener(){
-        return v -> ((CourseActivity)getActivity()).onQuizFinished();
+    private View.OnClickListener getCloseBtnListener() {
+        return v -> ((CourseActivity) getActivity()).onQuizFinished();
     }
 
-    private void nextStep(){
+    private void nextStep() {
         if (quiz.hasNext()) {
             quiz.moveNext();
             showQuestion();
@@ -382,28 +465,24 @@ public abstract class AnswerWidget extends BaseWidget {
         int current = binding.progressQuiz.getProgress();
         binding.progressQuiz.setMax(quiz.getTotalNoQuestions());
         barAnim.animate(current, quiz.getCurrentQuestionNo());
-        try {
-            if (quiz.getCurrentQuestion().responseExpected()) {
-                binding.tvQuizProgress.setText(quiz.getCurrentQuestionNo() + "/" + quiz.getTotalNoQuestions());
-            } else {
-                binding.tvQuizProgress.setText("");
-            }
-        } catch (InvalidQuizException e) {
-            Analytics.logException(e);
-            Log.d(TAG, QUIZ_EXCEPTION_MESSAGE, e);
-        }
+
+        binding.tvQuizProgress.setText(quiz.getCurrentQuestionNo() + "/" + quiz.getTotalNoQuestions());
+
     }
 
     private boolean saveAnswer() {
+        if (currentQuestion == null){
+            return false;
+        }
         try {
             List<String> answers = currentQuestion.getQuestionResponses(quiz.getCurrentQuestion().getResponseOptions());
-            if ( (answers != null) && (!answers.isEmpty())) {
-                quiz.getCurrentQuestion().setUserResponses(answers);
-                return true;
+            if (quiz.getCurrentQuestion().responseExpected() && (answers == null || answers.isEmpty())) {
+                return false;
             }
-            if (!quiz.getCurrentQuestion().responseExpected()) {
-                return true;
-            }
+
+            quiz.getCurrentQuestion().setUserResponses(answers);
+            return true;
+
         } catch (InvalidQuizException e) {
             Analytics.logException(e);
             Log.d(TAG, QUIZ_EXCEPTION_MESSAGE, e);
@@ -416,8 +495,10 @@ public abstract class AnswerWidget extends BaseWidget {
         builder.setTitle(getContext().getString(R.string.feedback));
         builder.setMessage(UIUtils.getFromHtmlAndTrim(msg));
         try {
-            if(quiz.getCurrentQuestion().getScoreAsPercent() >= Quiz.QUIZ_QUESTION_PASS_THRESHOLD){
+            if (quiz.getCurrentQuestion().getScoreAsPercent() >= Quiz.QUIZ_QUESTION_PASS_THRESHOLD) {
                 builder.setIcon(R.drawable.quiz_tick);
+            } else if (quiz.getCurrentQuestion().getScoreAsPercent() > 0) {
+                builder.setIcon(R.drawable.quiz_partially_correct);
             } else {
                 builder.setIcon(R.drawable.quiz_cross);
             }
@@ -443,7 +524,7 @@ public abstract class AnswerWidget extends BaseWidget {
         this.saveTracker();
 
         View quizResultsLayout = getView() == null ? null : getView().findViewById(R.id.widget_quiz_results);
-        if (quizResultsLayout == null){
+        if (quizResultsLayout == null) {
             // load new layout
             View progressContainer = getView().findViewById(R.id.progress_container);
             ViewGroup parent = (ViewGroup) progressContainer.getParent();
@@ -453,7 +534,6 @@ public abstract class AnswerWidget extends BaseWidget {
             parent.addView(progressContainer, index);
         }
 
-
         Button actionBtn = getView().findViewById(R.id.quiz_results_button);
         Button exitBtn = getView().findViewById(R.id.quiz_exit_button);
         showResultsInfo();
@@ -462,13 +542,13 @@ public abstract class AnswerWidget extends BaseWidget {
             showBaselineResultMessage();
         }
         // Show the detail of which questions were right/wrong
-        if (quiz.getShowFeedback() == Quiz.SHOW_FEEDBACK_ALWAYS || quiz.getShowFeedback() == Quiz.SHOW_FEEDBACK_AT_END){
+        if (quiz.getShowFeedback() == Quiz.SHOW_FEEDBACK_ALWAYS || quiz.getShowFeedback() == Quiz.SHOW_FEEDBACK_AT_END) {
             showAnswersFeedback();
         }
 
         int quizAvailabilityMessage = getContentAvailability(true);
         boolean contentAvailable = quizAvailabilityMessage == QUIZ_AVAILABLE;
-        if (!contentAvailable){
+        if (!contentAvailable) {
             TextView availabilityMsg = getView().findViewById(R.id.quiz_availability_message);
             availabilityMsg.setText(quizAvailabilityMessage);
             availabilityMsg.setVisibility(View.VISIBLE);
@@ -478,9 +558,9 @@ public abstract class AnswerWidget extends BaseWidget {
         if (this.isBaseline) {
             exitBtn.setText(getString(R.string.widget_quiz_baseline_goto_course));
             actionBtn.setVisibility(View.GONE);
-        } else if (this.getActivityCompleted() || !contentAvailable){
+        } else if (this.getActivityCompleted() || !contentAvailable) {
             actionBtn.setVisibility(View.GONE);
-        } else{
+        } else {
             actionBtn.setText(getString(R.string.widget_quiz_results_restart));
             actionBtn.setOnClickListener(v -> restart());
         }
@@ -509,38 +589,47 @@ public abstract class AnswerWidget extends BaseWidget {
 
     @Override
     public void saveTracker() {
-        if(activity == null || !isOnResultsPage || quizAttemptSaved){
+        if (activity == null || !isOnResultsPage || quizAttemptSaved) {
             return;
         }
 
-        Log.d(TAG,"Saving tracker");
+        Log.d(TAG, "Saving tracker");
         saveAttemptTracker();
         quizAttemptSaved = true;
     }
 
     @Override
     public HashMap<String, Object> getWidgetConfig() {
+        saveAnswer(); // Before setting the quiz, we save the current answer
         HashMap<String, Object> config = new HashMap<>();
-        config.put(BaseWidget.PROPERTY_QUIZ, this.quiz);
-        config.put(BaseWidget.PROPERTY_ACTIVITY_STARTTIME, this.getStartTime());
-        config.put(BaseWidget.PROPERTY_ON_RESULTS_PAGE, this.isOnResultsPage);
-        config.put(BaseWidget.PROPERTY_ATTEMPT_SAVED, this.quizAttemptSaved);
+        config.put(PROPERTY_QUIZ, this.quiz);
+        config.put(PROPERTY_ACTIVITY_STARTTIME, this.getStartTime());
+        config.put(PROPERTY_ON_RESULTS_PAGE, this.isOnResultsPage);
+        config.put(PROPERTY_ATTEMPT_SAVED, this.quizAttemptSaved);
+        config.put(PROPERTY_INITIAL_INFO_SHOWN, initialInfoShown);
+        config.put(PROPERTY_LANG, prefLang);
         return config;
     }
 
     @Override
     public void setWidgetConfig(HashMap<String, Object> config) {
-        if (config.containsKey(BaseWidget.PROPERTY_QUIZ)) {
-            this.quiz = (Quiz) config.get(BaseWidget.PROPERTY_QUIZ);
+        if (config.containsKey(PROPERTY_QUIZ)) {
+            this.quiz = (Quiz) config.get(PROPERTY_QUIZ);
         }
         if (config.containsKey(BaseWidget.PROPERTY_ACTIVITY_STARTTIME)) {
             this.setStartTime((Long) config.get(BaseWidget.PROPERTY_ACTIVITY_STARTTIME));
         }
-        if (config.containsKey(BaseWidget.PROPERTY_ON_RESULTS_PAGE)) {
-            this.isOnResultsPage = (Boolean) config.get(BaseWidget.PROPERTY_ON_RESULTS_PAGE);
+        if (config.containsKey(PROPERTY_ON_RESULTS_PAGE)) {
+            this.isOnResultsPage = (Boolean) config.get(PROPERTY_ON_RESULTS_PAGE);
         }
-        if (config.containsKey(BaseWidget.PROPERTY_ATTEMPT_SAVED)) {
-            this.quizAttemptSaved = (Boolean) config.get(BaseWidget.PROPERTY_ATTEMPT_SAVED);
+        if (config.containsKey(PROPERTY_ATTEMPT_SAVED)) {
+            this.quizAttemptSaved = (Boolean) config.get(PROPERTY_ATTEMPT_SAVED);
+        }
+        if (config.containsKey(PROPERTY_INITIAL_INFO_SHOWN)){
+            this.initialInfoShown = (Boolean) config.get(PROPERTY_INITIAL_INFO_SHOWN);
+        }
+        if (config.containsKey(PROPERTY_LANG)) {
+            this.previousLang = (String) config.get(PROPERTY_LANG);
         }
     }
 
@@ -557,9 +646,9 @@ public abstract class AnswerWidget extends BaseWidget {
         return toRead;
     }
 
-    private void clearMediaPlayer(){
-        if ((mp != null) ) {
-            if (mp.isPlaying()){
+    private void clearMediaPlayer() {
+        if ((mp != null)) {
+            if (mp.isPlaying()) {
                 mp.stop();
             }
             mp.release();
@@ -567,40 +656,46 @@ public abstract class AnswerWidget extends BaseWidget {
         }
     }
 
-    private class OnImageClickListener implements OnClickListener{
+    private class OnImageClickListener implements OnClickListener {
 
         private final Context ctx;
 
-        public OnImageClickListener(Context ctx){
+        public OnImageClickListener(Context ctx) {
             this.ctx = ctx;
         }
 
         public void onClick(View v) {
             File file = (File) v.getTag();
             // check the file is on the file system (should be but just in case)
-            if(!file.exists()){
-                Toast.makeText(this.ctx,this.ctx.getString(R.string.error_resource_not_found,file.getName()), Toast.LENGTH_LONG).show();
+            if (!file.exists()) {
+                Toast.makeText(this.ctx, this.ctx.getString(R.string.error_resource_not_found, file.getName()), Toast.LENGTH_LONG).show();
                 return;
             }
             // check there is actually an app installed to open this filetype
             Intent intent = ExternalResourceOpener.getIntentToOpenResource(ctx, file);
-            if(intent != null){
+            if (intent != null) {
                 this.ctx.startActivity(intent);
             } else {
-                Toast.makeText(this.ctx,this.ctx.getString(R.string.error_resource_app_not_found,file.getName()), Toast.LENGTH_LONG).show();
+                Toast.makeText(this.ctx, this.ctx.getString(R.string.error_resource_app_not_found, file.getName()), Toast.LENGTH_LONG).show();
             }
         }
 
     }
 
-    private class OnMediaClickListener implements OnClickListener{
+    private class OnMediaClickListener implements OnClickListener {
         private final String mediaFileName;
 
-        public OnMediaClickListener(String mediaFileName){
+        public OnMediaClickListener(String mediaFileName) {
             this.mediaFileName = mediaFileName;
         }
+
         public void onClick(View v) {
             startMediaPlayerWithFile(mediaFileName);
         }
+    }
+
+    public float getPercentScore() {
+        quiz.mark(prefLang);
+        return quiz.getQuizPercentageScore();
     }
 }

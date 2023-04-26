@@ -6,6 +6,7 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import org.digitalcampus.oppia.analytics.AnalyticsProvider;
 import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.api.RemoteApiEndpoint;
 import org.digitalcampus.oppia.application.SessionManager;
@@ -22,8 +23,10 @@ import org.digitalcampus.oppia.model.QuizAttemptRepository;
 import org.digitalcampus.oppia.model.TagRepository;
 import org.digitalcampus.oppia.model.TrackerLogRepository;
 import org.digitalcampus.oppia.model.User;
+import org.digitalcampus.oppia.repository.InterfaceLanguagesRepository;
 import org.digitalcampus.oppia.service.DownloadServiceDelegate;
 import org.digitalcampus.oppia.service.courseinstall.CourseInstallerServiceDelegate;
+import org.digitalcampus.oppia.utils.ConnectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -137,4 +140,20 @@ public class AppModule {
         return new CustomFieldsRepository();
     }
 
+    @Provides
+    @Singleton
+    public AnalyticsProvider provideAnalyticsProvider(){
+        return new AnalyticsProvider();
+    }
+
+    @Provides
+    @Singleton
+    public ConnectionUtils provideConnectionUtils() {
+        return new ConnectionUtils();
+    }
+
+    @Provides
+    public InterfaceLanguagesRepository provideInterfaceLanguagesRepository(){
+        return new InterfaceLanguagesRepository();
+    }
 }

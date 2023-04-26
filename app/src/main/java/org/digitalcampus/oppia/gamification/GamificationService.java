@@ -22,6 +22,7 @@ import org.digitalcampus.oppia.utils.MetaDataUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.HashMap;
 import java.util.Locale;
 
 import androidx.preference.PreferenceManager;
@@ -54,6 +55,7 @@ public class GamificationService  extends IntentService {
     public static final String EVENTDATA_INSTANCEID = "data_instance_id";
     public static final String EVENTDATA_MEDIA_FILENAME = "data_media_filename";
     public static final String EVENTDATA_MEDIA_END_REACHED = "data_end_reached";
+    public static final String EVENTDATA_EXTRA = "data_extra";
 
     private static final String LOGDATA_LANG = "lang";
     private static final String LOGDATA_READALOUD = "readaloud";
@@ -90,18 +92,20 @@ public class GamificationService  extends IntentService {
                 boolean isBaseline = intent.getBooleanExtra(EVENTDATA_IS_BASELINE, false);
 
                 JSONObject eventData =  new MetaDataUtils(this).getMetaData();
-                String lang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+                String lang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
                 eventData.put(LOGDATA_LANG, lang);
 
                 GamificationEvent event = null;
                 Course course = null;
                 Activity act = null;
                 String trackerDigest = "";
+                String type = "";
 
                 if (SERVICE_EVENT_DOWNLOAD.equals(eventName)){
                     course = (Course) intent.getSerializableExtra(SERVICE_COURSE);
                     event = gEngine.processEventCourseDownloaded(course);
                     isCompleted = true;
+                    type = Tracker.DOWNLOAD_TYPE;
                 }
                 else if (SERVICE_EVENT_ACTIVITY.equals(eventName)){
                     if (isCompleted){
@@ -196,8 +200,17 @@ public class GamificationService  extends IntentService {
                 if (event == null)
                     return;
 
+                if (intent.hasExtra(EVENTDATA_EXTRA)){
+                    HashMap<String, String> extraData = (HashMap<String, String>) intent.getSerializableExtra(EVENTDATA_EXTRA);
+                    for (String key : extraData.keySet()){
+                        if (!eventData.has(key)){
+                            eventData.put(key, extraData.get(key));
+                        }
+                    }
+                }
+
                 Tracker t = new Tracker(this);
-                t.saveTracker(course.getCourseId(), trackerDigest, eventData, event.isCompleted() || isCompleted || isBaseline, event);
+                t.saveTracker(course.getCourseId(), trackerDigest, eventData, type, event.isCompleted() || isCompleted || isBaseline, event);
 
                 if (event.getPoints() > 0){
 
@@ -206,9 +219,8 @@ public class GamificationService  extends IntentService {
                         final GamificationEvent e = event;
                         final Activity a = act;
                         final Course c = course;
-                        new Handler(Looper.getMainLooper()).postDelayed((Runnable) () -> {
-                            broadcastEvent(e, a, c);
-                        }, 500);
+                        new Handler(Looper.getMainLooper()).postDelayed(() ->
+                                broadcastEvent(e, a, c), 500);
                     }
                     else{
                         broadcastEvent(event, act, course);

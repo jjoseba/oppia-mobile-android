@@ -4,7 +4,7 @@
     "en": "HEACM HEAT Module Part 1, full content, designed for use in Ethiopia"
   },
   "id": 65,
-  "is_draft": false,
+  "status": "live",
   "organisation": "Digital Campus",
   "priority": 0,
   "resource_uri": "/api/v2/course/65/",
@@ -14,5 +14,6 @@
   },
   "url": "https://staging.oppia-mobile.org/api/v2/course/65/download/",
   "username": "alex",
-  "version": 20150218163637
+  "version": 20150218163637,
+  "restricted": false
 }

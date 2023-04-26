@@ -32,7 +32,6 @@ import android.os.Bundle;
 import android.text.Layout;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.text.style.BulletSpan;
 import android.util.Log;
 import android.view.Menu;
@@ -66,6 +65,7 @@ import java.util.concurrent.Callable;
 public class UIUtils {
 
     public static final String TAG = UIUtils.class.getSimpleName();
+    private static final String EXCEPTION = "Exception:";
     private static int pointsToSubstractForAnimationSaved;
 
     private UIUtils() {
@@ -247,7 +247,7 @@ public class UIUtils {
                 funct.call();
             } catch (Exception e) {
                 Analytics.logException(e);
-                Log.d(TAG, "Exception:", e);
+                Log.d(TAG, EXCEPTION, e);
             }
 
         });
@@ -270,7 +270,7 @@ public class UIUtils {
         for (Lang lang : langs) {
             boolean found = false;
             for (Lang ln : languagesList) {
-                if (ln.getLanguage().equals(lang.getLanguage())) {
+                if (ln.getLanguage().equalsIgnoreCase(lang.getLanguage())) {
                     found = true;
                     break;
                 }
@@ -283,12 +283,12 @@ public class UIUtils {
         int prefLangPosition = -1;
         int i = 0;
 
-        String prefLanguage = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+        String prefLanguage = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
         for (Lang lang : languagesList) {
             Locale locale = new Locale(lang.getLanguage());
             String langDisp = locale.getDisplayLanguage(locale);
             langStringList.add(langDisp);
-            if (lang.getLanguage().equals(prefLanguage)) {
+            if (lang.getLanguage().equalsIgnoreCase(prefLanguage)) {
                 prefLangPosition = i;
             }
             i++;
@@ -301,16 +301,16 @@ public class UIUtils {
                     .setSingleChoiceItems(arr, prefLangPosition, (dialog, whichButton) -> {
                         String newLang = languagesList.get(whichButton).getLanguage();
                         Editor editor = prefs.edit();
-                        editor.putString(PrefsActivity.PREF_LANGUAGE, newLang);
+                        editor.putString(PrefsActivity.PREF_CONTENT_LANGUAGE, newLang);
                         editor.apply();
                         dialog.dismiss();
                         try {
                             funct.call();
                         } catch (Exception e) {
                             Analytics.logException(e);
-                            Log.d(TAG, "Exception:", e);
+                            Log.d(TAG, EXCEPTION, e);
                         }
-                    }).setTitle(ctx.getString(R.string.change_language))
+                    }).setTitle(ctx.getString(R.string.change_content_language))
                     .setNegativeButton(ctx.getString(R.string.cancel), (dialog, which) -> {
                         // do nothing
                     }).create();
@@ -342,9 +342,7 @@ public class UIUtils {
             if (view != null) {
                 imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
             }
-        } catch (Exception e) {
-
-        }
+        } catch (Exception ignored) { }
     }
 
     private static final int BULLET_SPAN_GAP_WIDTH = 20;
@@ -393,7 +391,7 @@ public class UIUtils {
         int checkedPosition = 0;
         for (int i = 0; i < textSizeValues.length; i++) {
             String textSizeValue = textSizeValues[i];
-            if (TextUtils.equals(textSizeValue, selectedFontSize)) {
+            if (TextUtilsJava.equals(textSizeValue, selectedFontSize)) {
                 checkedPosition = i;
                 break;
             }
@@ -411,7 +409,7 @@ public class UIUtils {
                         }
                     } catch (Exception e) {
                         Analytics.logException(e);
-                        Log.d(TAG, "Exception:", e);
+                        Log.d(TAG, EXCEPTION, e);
                     }
 
                     dialog.dismiss();

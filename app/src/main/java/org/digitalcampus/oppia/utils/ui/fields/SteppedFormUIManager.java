@@ -1,6 +1,5 @@
 package org.digitalcampus.oppia.utils.ui.fields;
 
-import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -8,6 +7,7 @@ import android.widget.TextView;
 import com.badoualy.stepperindicator.StepperIndicator;
 
 import org.digitalcampus.oppia.model.CustomField;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.util.List;
 
@@ -46,7 +46,7 @@ public class SteppedFormUIManager {
     private CustomField.RegisterFormStep getStepWithOrder(int order){
         for (CustomField.RegisterFormStep step : steps){
             if (step.getOrder() == order){
-                if (TextUtils.isEmpty(step.getConditionalByField())){
+                if (TextUtilsJava.isEmpty(step.getConditionalByField())){
                     return step;
                 }
 
@@ -109,7 +109,7 @@ public class SteppedFormUIManager {
 
     private void updateDescription(){
 
-        if (TextUtils.isEmpty(currentStep.getHelperText())) {
+        if (TextUtilsJava.isEmpty(currentStep.getHelperText())) {
             stepDescription.setVisibility(View.GONE);
         }
         else {

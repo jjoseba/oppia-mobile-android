@@ -2,10 +2,9 @@ package org.digitalcampus.oppia.activity;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,6 +23,7 @@ import org.digitalcampus.mobile.learning.databinding.ActivityMainBinding;
 import org.digitalcampus.mobile.learning.databinding.DrawerHeaderBinding;
 import org.digitalcampus.mobile.learning.databinding.ViewBadgeBinding;
 import org.digitalcampus.oppia.application.App;
+import org.digitalcampus.oppia.application.PermissionsManager;
 import org.digitalcampus.oppia.fragments.CoursesListFragment;
 import org.digitalcampus.oppia.fragments.MainPointsFragment;
 import org.digitalcampus.oppia.fragments.MainScorecardFragment;
@@ -44,7 +44,9 @@ import java.util.Map;
 import javax.inject.Inject;
 
 public class MainActivity extends AppActivity implements BottomNavigationView.OnNavigationItemSelectedListener,
-        SharedPreferences.OnSharedPreferenceChangeListener, View.OnClickListener {
+        View.OnClickListener {
+
+    public static final String EXTRA_FIRST_LOGIN = "extra_first_login";
 
     private DrawerMenuManager drawer;
     private MenuItem searchMenuItem;
@@ -54,13 +56,14 @@ public class MainActivity extends AppActivity implements BottomNavigationView.On
     private ActivityMainBinding binding;
     private DrawerHeaderBinding bindingHeader;
     private ViewBadgeBinding bindingBadgeView;
+    private boolean stagingWarningClosed;
 
 
     @SuppressLint("RestrictedApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this));
         setContentView(binding.getRoot());
         getAppComponent().inject(this);
@@ -78,12 +81,32 @@ public class MainActivity extends AppActivity implements BottomNavigationView.On
 
         bindingHeader.viewProfileOptions.setVisibility(View.GONE);
 
-        getSupportFragmentManager().beginTransaction().replace(R.id.frame_main, new CoursesListFragment()).commit();
+        getSupportFragmentManager().beginTransaction().replace(R.id.frame_main, getCoursesListFragment()).commit();
 
         saveServerBadgeAwardCriteria();
 
         binding.drawerVersionName.setText(getString(R.string.version, BuildConfig.VERSION_NAME));
 
+        checkNotificationPermission();
+
+    }
+
+
+    private void checkNotificationPermission() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            final List<String> notGrantedPerms = PermissionsManager.filterNotGrantedPermissions(
+                    this, PermissionsManager.NOTIFICATIONS_PERMISSIONS_REQUIRED);
+            if (!notGrantedPerms.isEmpty()) {
+                PermissionsManager.requestPermissions(this, notGrantedPerms);
+            }
+        }
+    }
+
+    private Fragment getCoursesListFragment() {
+        Fragment fragment = new CoursesListFragment();
+        fragment.setArguments(getIntent().getExtras());
+        return fragment;
     }
 
     private void saveServerBadgeAwardCriteria() {
@@ -108,6 +131,27 @@ public class MainActivity extends AppActivity implements BottomNavigationView.On
 
         configureUserOptions();
         updateUserTotalPoints();
+
+        checkStagingServer();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        PermissionsManager.onRequestPermissionsResult(this, requestCode, permissions, grantResults);
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
+    private void checkStagingServer() {
+        String server = prefs.getString(PrefsActivity.PREF_SERVER, getString(R.string.prefServerDefault));
+        if (server == null) return;
+        boolean staging = server.startsWith("http://staging.") || server.startsWith("https://staging.");
+        boolean showWarning = staging && !stagingWarningClosed;
+        binding.viewStagingWarning.setVisibility(showWarning ? View.VISIBLE : View.GONE);
+
+        binding.imgCloseStagingWarning.setOnClickListener(view -> {
+            binding.viewStagingWarning.setVisibility(View.GONE);
+            stagingWarningClosed = true;
+        });
     }
 
     private void updateUserTotalPoints() {
@@ -197,7 +241,7 @@ public class MainActivity extends AppActivity implements BottomNavigationView.On
 
     // CONFIGURATIONS
     private void configureUserOptions() {
-        boolean logoutVisible = getPrefs().getBoolean(PrefsActivity.PREF_LOGOUT_ENABLED, App.MENU_ALLOW_LOGOUT);
+        boolean logoutVisible = getPrefs().getBoolean(PrefsActivity.PREF_LOGOUT_ENABLED, BuildConfig.MENU_ALLOW_LOGOUT);
         bindingHeader.btnLogout.setVisibility(logoutVisible ? View.VISIBLE : View.GONE);
         if (!logoutVisible) {
             setupProfileOptionsView(false);
@@ -231,8 +275,8 @@ public class MainActivity extends AppActivity implements BottomNavigationView.On
                 fragment = MainPointsFragment.newInstance();
                 break;
 
-                default:
-                    throw new IllegalArgumentException("menuItem not valid: " + menuItem.toString());
+            default:
+                throw new IllegalArgumentException("menuItem not valid: " + menuItem.toString());
         }
 
         getSupportFragmentManager().beginTransaction().replace(R.id.frame_main, fragment).commit();
@@ -286,19 +330,10 @@ public class MainActivity extends AppActivity implements BottomNavigationView.On
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId() ==  R.id.menu_search) {
+        if (item.getItemId() == R.id.menu_search) {
             drawer.launchIntentForActivity(SearchActivity.class);
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-
-        if(key.equalsIgnoreCase(PrefsActivity.PREF_DOWNLOAD_VIA_CELLULAR_ENABLED)){
-            boolean newPref = sharedPreferences.getBoolean(PrefsActivity.PREF_DOWNLOAD_VIA_CELLULAR_ENABLED, false);
-            Log.d(TAG, PrefsActivity.PREF_DOWNLOAD_VIA_CELLULAR_ENABLED + ": " + newPref);
-        }
     }
 
 }

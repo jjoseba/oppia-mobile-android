@@ -4,22 +4,18 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.mobile.learning.databinding.ActivityCourseQuizAttemptsBinding;
-import org.digitalcampus.mobile.learning.databinding.ActivityQuizAttemptBinding;
 import org.digitalcampus.oppia.adapter.QuizAttemptAdapter;
 import org.digitalcampus.oppia.model.QuizAttempt;
 import org.digitalcampus.oppia.model.QuizAttemptRepository;
 import org.digitalcampus.oppia.model.QuizStats;
+import org.digitalcampus.oppia.utils.CourseUtils;
 
 import java.util.List;
 
 import javax.inject.Inject;
-
-import androidx.recyclerview.widget.RecyclerView;
 
 public class CourseQuizAttemptsActivity extends AppActivity {
 
@@ -45,33 +41,40 @@ public class CourseQuizAttemptsActivity extends AppActivity {
         getAppComponent().inject(this);
 
         Bundle bundle = this.getIntent().getExtras();
-        if (bundle == null) {
-            //There is no quiz?
-            return;
+        if (bundle == null || !bundle.containsKey(QuizStats.TAG)) {
+            throw new IllegalArgumentException("Mandatory argument: " + QuizStats.TAG);
         }
 
         stats = (QuizStats) bundle.getSerializable(QuizStats.TAG);
-        setTitle(stats.getSectionTitle() + " > " + stats.getQuizTitle());
+        setTitle((stats.getSectionTitle() != null ? stats.getSectionTitle() + " > " : "") + stats.getQuizTitle());
 
         binding.viewQuizStats.highlightAttempted.setText(String.valueOf(stats.getNumAttempts()));
 
-        if (stats.getNumAttempts() == 0){
+        boolean isReadOnlyCourse = CourseUtils.isReadOnlyCourse(this, stats.getDigest(), prefs);
+
+        if (stats.getNumAttempts() == 0) {
             binding.retakeQuizBtn.setVisibility(View.GONE);
             binding.attemptsList.setVisibility(View.GONE);
             binding.viewQuizStats.highlightAverage.setText("-");
             binding.viewQuizStats.highlightBest.setText("-");
             binding.emptyState.setVisibility(View.VISIBLE);
-            binding.btnTakeQuiz.setOnClickListener(view -> takeQuiz());
-        }
-        else{
+            if (isReadOnlyCourse) {
+                binding.btnTakeQuiz.setVisibility(View.GONE);
+                binding.tvQuizNotAvailable.setVisibility(View.VISIBLE);
+                binding.tvQuizNotAvailable.setText(getString(R.string.read_only_answer_unavailable_message, getString(R.string.quiz)));
+            } else {
+                binding.btnTakeQuiz.setVisibility(View.VISIBLE);
+                binding.tvQuizNotAvailable.setVisibility(View.GONE);
+                binding.btnTakeQuiz.setOnClickListener(view -> takeQuiz());
+            }
+        } else {
             binding.viewQuizStats.highlightAverage.setText(stats.getAveragePercent() + "%");
             binding.viewQuizStats.highlightBest.setText(stats.getPercent() + "%");
 
             boolean showAttemptQuizButton = bundle.getBoolean(SHOW_ATTEMPT_BUTTON, true);
-            if (!showAttemptQuizButton){
+            if (!showAttemptQuizButton || isReadOnlyCourse) {
                 binding.retakeQuizBtn.setVisibility(View.GONE);
-            }
-            else{
+            } else {
                 binding.retakeQuizBtn.setVisibility(View.VISIBLE);
                 binding.retakeQuizBtn.setOnClickListener(view -> takeQuiz());
             }
@@ -93,7 +96,7 @@ public class CourseQuizAttemptsActivity extends AppActivity {
         binding.attemptsList.setAdapter(adapter);
     }
 
-    private void takeQuiz(){
+    private void takeQuiz() {
         Intent returnIntent = new Intent();
         returnIntent.putExtra(CourseIndexActivity.JUMPTO_TAG, stats.getDigest());
         setResult(CourseIndexActivity.RESULT_JUMPTO, returnIntent);

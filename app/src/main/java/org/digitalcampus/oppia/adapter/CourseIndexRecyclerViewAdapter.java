@@ -2,14 +2,10 @@ package org.digitalcampus.oppia.adapter;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import androidx.preference.PreferenceManager;
 
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -46,12 +42,11 @@ public class CourseIndexRecyclerViewAdapter extends ExpandableRecyclerView.Adapt
     private int normalColor;
 
 
-    public CourseIndexRecyclerViewAdapter(Context ctx, List<Section> sectionList, Course course) {
+    public CourseIndexRecyclerViewAdapter(Context ctx, SharedPreferences prefs, List<Section> sectionList, Course course) {
         super();
         this.sectionList = sectionList;
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        prefLang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+        prefLang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
         showSectionNumbers = prefs.getBoolean(PrefsActivity.PREF_SHOW_SECTION_NOS, false);
         highlightCompleted = prefs.getBoolean(PrefsActivity.PREF_HIGHLIGHT_COMPLETED, App.DEFAULT_DISPLAY_COMPLETED);
         boolean startCollapsed = prefs.getBoolean(PrefsActivity.PREF_START_COURSEINDEX_COLLAPSED, false);
@@ -77,6 +72,11 @@ public class CourseIndexRecyclerViewAdapter extends ExpandableRecyclerView.Adapt
         }
 
         notifyDataSetChanged();
+    }
+
+    public void reloadLanguage(SharedPreferences prefs){
+        prefLang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
+        super.notifyDataSetChanged();
     }
 
     @Override
@@ -135,6 +135,15 @@ public class CourseIndexRecyclerViewAdapter extends ExpandableRecyclerView.Adapt
         title += section.getTitle(prefLang);
         holder.binding.title.setText(title);
         holder.binding.sectionIcon.setVisibility(section.hasCustomImage() ? View.VISIBLE : View.GONE);
+        if (section.isProtectedByPassword()){
+            holder.binding.lockIndicator.setVisibility(View.VISIBLE);
+            int iconId = section.isUnlocked() ? R.drawable.ic_unlock : R.drawable.ic_lock;
+            holder.binding.lockIndicator.setTag(iconId); // Needed for tests
+            holder.binding.lockIndicator.setImageResource(iconId);
+        }
+        else{
+            holder.binding.lockIndicator.setVisibility(View.GONE);
+        }
         if (section.hasCustomImage()){
             String image = section.getImageFilePath(courseLocation);
             Picasso.get().load(new File(image)).into(holder.binding.sectionIcon);

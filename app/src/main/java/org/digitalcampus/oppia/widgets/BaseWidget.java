@@ -29,7 +29,6 @@ import androidx.fragment.app.Fragment;
 
 import androidx.preference.PreferenceManager;
 
-import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -37,9 +36,12 @@ import org.digitalcampus.mobile.learning.BuildConfig;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.PrefsActivity;
 import org.digitalcampus.oppia.application.App;
+import org.digitalcampus.oppia.application.Tracker;
 import org.digitalcampus.oppia.di.AppComponent;
 import org.digitalcampus.oppia.model.Activity;
 import org.digitalcampus.oppia.model.Course;
+import org.digitalcampus.oppia.model.Media;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.mediaplayer.VideoPlayerActivity;
 import org.digitalcampus.oppia.utils.storage.FileUtils;
 import org.digitalcampus.oppia.utils.storage.Storage;
@@ -56,10 +58,7 @@ public abstract class BaseWidget extends Fragment {
     public static final String ACTION_TEXT_SIZE_CHANGED = BuildConfig.APPLICATION_ID + ".ACTION_TEXT_SIZE_CHANGED";
 
     protected static final String WIDGET_CONFIG = "widget_config";
-    protected static final String PROPERTY_QUIZ = "quiz";
     protected static final String PROPERTY_ACTIVITY_STARTTIME = "Activity_StartTime";
-    protected static final String PROPERTY_ON_RESULTS_PAGE = "OnResultsPage";
-    protected static final String PROPERTY_ATTEMPT_SAVED = "attemptSaved";
     protected static final String PROPERTY_COURSE = "Course";
     protected static final String PROPERTY_ACTIVITY = "Activity";
 
@@ -85,7 +84,7 @@ public abstract class BaseWidget extends Fragment {
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (TextUtils.equals(intent.getAction(), ACTION_TEXT_SIZE_CHANGED)) {
+            if (TextUtilsJava.equals(intent.getAction(), ACTION_TEXT_SIZE_CHANGED)) {
                 int fontSize = Integer.parseInt(prefs.getString(PrefsActivity.PREF_TEXT_SIZE, "16"));
                 onTextSizeChanged(fontSize);
             }
@@ -98,7 +97,7 @@ public abstract class BaseWidget extends Fragment {
         Log.i(TAG, "onCreate WidgetFactory: " + this.getClass().getSimpleName());
 
         prefs = PreferenceManager.getDefaultSharedPreferences(super.getActivity());
-        prefLang = prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage());
+        prefLang = prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage());
 
         getActivity().registerReceiver(receiver, new IntentFilter(ACTION_TEXT_SIZE_CHANGED));
     }
@@ -169,20 +168,24 @@ public abstract class BaseWidget extends Fragment {
 
     protected void startMediaPlayerWithFile(String mediaFileName){
 
+        String filename = mediaFileName;
         Context ctx = getActivity();
         // check media file exists
-        if (!Storage.mediaFileExists(ctx, mediaFileName)) {
+        if (!Storage.mediaFileExists(ctx, filename)) {
             //Try if the filename is URL encoded
-            mediaFileName = Uri.decode(mediaFileName);
-            if (!Storage.mediaFileExists(ctx, mediaFileName)){
+            filename = Uri.decode(mediaFileName);
+            if (!Storage.mediaFileExists(ctx, filename)){
                 Toast.makeText(ctx,
                     getString(R.string.error_media_not_found, mediaFileName),
                     Toast.LENGTH_LONG).show();
+                Media m =  activity.getMedia(mediaFileName);
+                String digest = (m == null) ? "" : m.getDigest();
+                new Tracker(ctx).saveMissingMediaTracker(course.getCourseId(), digest, mediaFileName);
                 return;
             }
         }
 
-        String mimeType = FileUtils.getMimeType(Storage.getMediaPath(ctx) + mediaFileName);
+        String mimeType = FileUtils.getMimeType(Storage.getMediaPath(ctx) + filename);
         if (!FileUtils.isSupportedMediafileType(mimeType)) {
             Toast.makeText(ctx,
                     getString(R.string.error_media_unsupported, mediaFileName),
@@ -192,7 +195,7 @@ public abstract class BaseWidget extends Fragment {
 
         Intent intent = new Intent(ctx, VideoPlayerActivity.class);
         Bundle tb = new Bundle();
-        tb.putSerializable(VideoPlayerActivity.MEDIA_TAG, mediaFileName);
+        tb.putSerializable(VideoPlayerActivity.MEDIA_TAG, filename);
         tb.putSerializable(Activity.TAG, activity);
         tb.putSerializable(Course.TAG, course);
         intent.putExtras(tb);

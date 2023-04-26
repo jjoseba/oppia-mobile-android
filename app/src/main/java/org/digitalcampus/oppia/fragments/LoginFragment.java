@@ -17,25 +17,16 @@
 
 package org.digitalcampus.oppia.fragments;
 
-import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
 
 import org.digitalcampus.mobile.learning.R;
-import org.digitalcampus.mobile.learning.databinding.FragmentAboutBinding;
 import org.digitalcampus.mobile.learning.databinding.FragmentLoginBinding;
-import org.digitalcampus.oppia.activity.MainActivity;
-import org.digitalcampus.oppia.activity.ViewDigestActivity;
 import org.digitalcampus.oppia.activity.WelcomeActivity;
 import org.digitalcampus.oppia.api.ApiEndpoint;
-import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.listener.SubmitEntityListener;
 import org.digitalcampus.oppia.model.User;
 import org.digitalcampus.oppia.task.LoginTask;
@@ -46,13 +37,10 @@ import javax.inject.Inject;
 
 public class LoginFragment extends AppFragment implements SubmitEntityListener<User> {
 
-    private Context appContext;
-
     @Inject
     ApiEndpoint apiEndpoint;
 
     private FragmentLoginBinding binding;
-
     public static LoginFragment newInstance() {
         return new LoginFragment();
     }
@@ -69,7 +57,6 @@ public class LoginFragment extends AppFragment implements SubmitEntityListener<U
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        appContext = super.getActivity().getApplicationContext();
         getAppComponent().inject(this);
 
         binding.loginBtn.setOnClickListener(v -> onLoginClick());
@@ -123,7 +110,8 @@ public class LoginFragment extends AppFragment implements SubmitEntityListener<U
 
         if (response.isSuccess()) {
             User user = response.getEntity();
-            ((WelcomeActivity) getActivity()).onSuccessUserAccess(user);
+            boolean firstLogin = !user.isLocalUser();
+            ((WelcomeActivity) getActivity()).onSuccessUserAccess(user, firstLogin);
 
         } else {
             Context ctx = super.getActivity();

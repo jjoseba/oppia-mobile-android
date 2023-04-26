@@ -27,6 +27,7 @@ import org.digitalcampus.oppia.model.GamificationEvent;
 import org.digitalcampus.oppia.model.Lang;
 import org.digitalcampus.oppia.model.Media;
 import org.digitalcampus.oppia.model.Section;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.xml.sax.Attributes;
 
 import java.util.ArrayList;
@@ -38,29 +39,32 @@ class CourseXMLHandler extends DefaultLexicalHandler implements IMediaXMLHandler
     private static final String NODE_LANG = "lang";
     private static final String NODE_TITLE = "title";
     private static final String NODE_PRIORITY = "priority";
-    private static final String NODE_ID = "id";
     private static final String NODE_DESCRIPTION = "description";
     private static final String NODE_VERSIONID = "versionid";
     private static final String NODE_PAGE = "page";
     private static final String NODE_LOCATION = "location";
-    private static final String NODE_ORDER = "order";
-    private static final String NODE_TYPE = "type";
-    private static final String NODE_DIGEST = "digest";
     private static final String NODE_IMAGE = "image";
-    private static final String NODE_FILENAME = "filename";
-    private static final String NODE_LENGTH = "length";
     private static final String NODE_ACTIVITY = "activity";
     private static final String NODE_CONTENT = "content";
     private static final String NODE_MEDIA = "media";
-    private static final String NODE_DOWNLOAD_URL = "download_url";
     private static final String NODE_FILE = "file";
-    private static final String NODE_FILESIZE = "filesize";
     private static final String NODE_SECTION = "section";
     private static final String NODE_META = "meta";
     private static final String NODE_SEQUENCING = "sequencing";
     private static final String NODE_GAMIFICATION = "gamification";
     private static final String NODE_EVENT = "event";
+
+    private static final String ATTR_LANG = "lang";
+    private static final String ATTR_ID = "id";
+    private static final String ATTR_LENGTH = "length";
+    private static final String ATTR_FILESIZE = "filesize";
+    private static final String ATTR_DOWNLOAD_URL = "download_url";
+    private static final String ATTR_ORDER = "order";
+    private static final String ATTR_FILENAME = "filename";
+    private static final String ATTR_DIGEST = "digest";
+    private static final String ATTR_TYPE = "type";
     private static final String ATTR_NAME = "name";
+    private static final String ATTR_PASSWORD = "password";
 
     private long courseId;
     private long userId;
@@ -121,15 +125,19 @@ class CourseXMLHandler extends DefaultLexicalHandler implements IMediaXMLHandler
         if (NODE_SECTION.equals(aQName)) {
             currentSection = new Section();
             sectTitles = new ArrayList<>();
-            currentSection.setOrder(Integer.parseInt(aAttributes.getValue(NODE_ORDER)));
+            currentSection.setOrder(Integer.parseInt(aAttributes.getValue(ATTR_ORDER)));
+            String sectionPassword = aAttributes.getValue(ATTR_PASSWORD);
+            if (!TextUtilsJava.isEmpty(sectionPassword)){
+                currentSection.setPassword(sectionPassword);
+            }
             parentElements.push(NODE_SECTION);
         }
         else if (NODE_ACTIVITY.equals(aQName)){
             currentActivity = new Activity();
             currentActivity.setCourseId(courseId);
-            currentActivity.setDigest(aAttributes.getValue(NODE_DIGEST));
-            currentActivity.setActType(aAttributes.getValue(NODE_TYPE));
-            currentActivity.setActId(Integer.parseInt(aAttributes.getValue(NODE_ORDER)));
+            currentActivity.setDigest(aAttributes.getValue(ATTR_DIGEST));
+            currentActivity.setActType(aAttributes.getValue(ATTR_TYPE));
+            currentActivity.setActId(Integer.parseInt(aAttributes.getValue(ATTR_ORDER)));
             actTitles = new ArrayList<>();
             actLocations = new ArrayList<>();
             actContents = new ArrayList<>();
@@ -140,39 +148,39 @@ class CourseXMLHandler extends DefaultLexicalHandler implements IMediaXMLHandler
 
         }
         else if (NODE_TITLE.equals(aQName)) {
-            currentLang = aAttributes.getValue(NODE_LANG);
+            currentLang = aAttributes.getValue(ATTR_LANG);
         }
         else if (NODE_LOCATION.equals(aQName)) {
             currentLang = aAttributes.getValue(NODE_LANG);
-            String mimeType = aAttributes.getValue(NODE_TYPE);
+            String mimeType = aAttributes.getValue(ATTR_TYPE);
             if ((mimeType != null) && (NODE_ACTIVITY.equals(parentElements.peek()))){
                 currentActivity.setMimeType(mimeType);
             }
         }
         else if (NODE_CONTENT.equals(aQName)) {
-            currentLang = aAttributes.getValue(NODE_LANG);
+            currentLang = aAttributes.getValue(ATTR_LANG);
         }
         else if (NODE_DESCRIPTION.equals(aQName)) {
-            currentLang = aAttributes.getValue(NODE_LANG);
+            currentLang = aAttributes.getValue(ATTR_LANG);
         }
         else if (NODE_IMAGE.equals(aQName)) {
             if (NODE_ACTIVITY.equals(parentElements.peek())){
-                currentActivity.setImageFile(aAttributes.getValue(NODE_FILENAME));
+                currentActivity.setImageFile(aAttributes.getValue(ATTR_FILENAME));
             }
             else if (NODE_META.equals(parentElements.peek())){
-                courseIcon = aAttributes.getValue(NODE_FILENAME);
+                courseIcon = aAttributes.getValue(ATTR_FILENAME);
             }
             else if (NODE_SECTION.equals(parentElements.peek())){
-                currentSection.setImageFile(aAttributes.getValue(NODE_FILENAME));
+                currentSection.setImageFile(aAttributes.getValue(ATTR_FILENAME));
             }
         }
         else if (NODE_FILE.equals(aQName)) {
             Media m = new Media();
-            m.setFilename(aAttributes.getValue(NODE_FILENAME));
-            m.setDownloadUrl(aAttributes.getValue(NODE_DOWNLOAD_URL));
-            m.setDigest(aAttributes.getValue(NODE_DIGEST));
-            String mediaLength = aAttributes.getValue(NODE_LENGTH);
-            String mediaFilesize = aAttributes.getValue(NODE_FILESIZE);
+            m.setFilename(aAttributes.getValue(ATTR_FILENAME));
+            m.setDownloadUrl(aAttributes.getValue(ATTR_DOWNLOAD_URL));
+            m.setDigest(aAttributes.getValue(ATTR_DIGEST));
+            String mediaLength = aAttributes.getValue(ATTR_LENGTH);
+            String mediaFilesize = aAttributes.getValue(ATTR_FILESIZE);
             m.setLength(mediaLength==null?0:Integer.parseInt(mediaLength));
             m.setFileSize(mediaFilesize == null ? 0 : Double.parseDouble(mediaFilesize));
             currentMedia.add(m);
@@ -187,7 +195,7 @@ class CourseXMLHandler extends DefaultLexicalHandler implements IMediaXMLHandler
             currentPage = new CourseMetaPage();
             pageTitles = new ArrayList<>();
             pageLocations = new ArrayList<>();
-            currentPage.setId(Integer.parseInt(aAttributes.getValue(NODE_ID)));
+            currentPage.setId(Integer.parseInt(aAttributes.getValue(ATTR_ID)));
             parentElements.push(NODE_PAGE);
         }
         else if (NODE_GAMIFICATION.equals(aQName)){
@@ -203,6 +211,9 @@ class CourseXMLHandler extends DefaultLexicalHandler implements IMediaXMLHandler
 
         if (NODE_SECTION.equals(aQName)){
             currentSection.setTitles(sectTitles);
+            if (currentSection.isProtectedByPassword()){
+                currentSection.setUnlocked(db.sectionUnlocked(courseId, currentSection.getOrder(), userId));
+            }
             sections.add(currentSection);
             parentElements.pop();
         }

@@ -22,7 +22,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 
 import androidx.fragment.app.Fragment;
-import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
 
@@ -53,12 +52,11 @@ public class ScorecardActivity extends AppActivity {
 
 	private List<Fragment> fragments = new ArrayList<>();
 	private List<String> tabTitles = new ArrayList<>();
-	private ActivityScorecardBinding binding;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		binding = ActivityScorecardBinding.inflate(LayoutInflater.from(this));
+		ActivityScorecardBinding binding = ActivityScorecardBinding.inflate(LayoutInflater.from(this));
 		setContentView(binding.getRoot());
 
 		Bundle bundle = this.getIntent().getExtras();

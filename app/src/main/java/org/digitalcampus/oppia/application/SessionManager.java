@@ -19,7 +19,6 @@ package org.digitalcampus.oppia.application;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.digitalcampus.oppia.activity.PrefsActivity;
@@ -29,10 +28,9 @@ import org.digitalcampus.oppia.exception.UserNotFoundException;
 import org.digitalcampus.oppia.listener.PreloadAccountsListener;
 import org.digitalcampus.oppia.model.User;
 import org.digitalcampus.oppia.model.db_model.UserPreference;
-import org.digitalcampus.oppia.service.CoursesCompletionReminderWorkerManager;
 import org.digitalcampus.oppia.task.PreloadAccountsTask;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 import org.digitalcampus.oppia.utils.storage.Storage;
-import org.digitalcampus.oppia.utils.ui.OppiaNotificationUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -52,7 +50,7 @@ public class SessionManager {
 
     private static final List<String> USER_STRING_PREFS = Arrays.asList(
             PrefsActivity.PREF_PHONE_NO,
-            PrefsActivity.PREF_LANGUAGE,
+            PrefsActivity.PREF_CONTENT_LANGUAGE,
             PrefsActivity.PREF_NO_SCHEDULE_REMINDERS,
             PrefsActivity.PREF_TEXT_SIZE,
             PrefsActivity.PREF_GAMIFICATION_POINTS_ANIMATION,
@@ -79,7 +77,13 @@ public class SessionManager {
     }
     public static boolean isLoggedIn(Context ctx) {
         String username = getUsername(ctx);
-        return !username.trim().equals("");
+        return !TextUtilsJava.isEmpty(username);
+    }
+
+    // For testing, to be able to pass mocked prefs
+    public static boolean isLoggedIn(SharedPreferences prefs) {
+        String username = getUsernameFromPrefs(prefs);
+        return !TextUtilsJava.isEmpty(username);
     }
 
     private static String getUsernameFromPrefs(SharedPreferences prefs) {
@@ -96,7 +100,6 @@ public class SessionManager {
             return u.getDisplayName();
 
         } catch (UserNotFoundException e) {
-            Analytics.logException(e);
             Log.d(TAG, "User not found: ", e);
             return null;
         }
@@ -141,7 +144,7 @@ public class SessionManager {
         String username = getUsernameFromPrefs(prefs);
 
         //If there was a logged in user, we save her Preferences in the DB
-        if (!TextUtils.isEmpty(username)) {
+        if (!TextUtilsJava.isEmpty(username)) {
             saveUserPrefs(username, prefs);
         }
 
@@ -160,7 +163,7 @@ public class SessionManager {
 
         for (String prefID : USER_STRING_PREFS) {
             String prefValue = prefs.getString(prefID, "");
-            if (!TextUtils.isEmpty(prefValue)) {
+            if (!TextUtilsJava.isEmpty(prefValue)) {
                 userPreferences.add(new UserPreference(username, prefID, prefValue));
             }
         }
@@ -208,6 +211,12 @@ public class SessionManager {
         App.getDb().userPreferenceDao().insert(userPreference);
     }
 
+    public static void invalidateAllApiKeys(Context ctx){
+            for (User u : DbHelper.getInstance(ctx).getAllUsers()) {
+                SessionManager.setUserApiKeyValid(u, false);
+            }
+    }
+
     public static void invalidateCurrentUserApiKey(Context ctx){
         try {
             User u = DbHelper.getInstance(ctx).getUser(SessionManager.getUsername(ctx));
@@ -217,9 +226,9 @@ public class SessionManager {
         }
     }
 
-    public static boolean isUserApiKeyValid(Context ctx) {
-        if (isLoggedIn(ctx)) {
-            String user = getUsername(ctx);
+    public static boolean isUserApiKeyValid(SharedPreferences prefs) {
+        if (isLoggedIn(prefs)) {
+            String user = getUsernameFromPrefs(prefs);
             return isUserApiKeyValid(user);
         }
         return true;
@@ -229,6 +238,16 @@ public class SessionManager {
 
         UserPreference userPref = App.getDb().userPreferenceDao().getUserPreference(username, APIKEY_VALID);
         return (userPref == null || STR_TRUE.equals(userPref.getValue()));
+    }
+
+    public static boolean areAllApiKeysInvalid(Context ctx){
+        List<User> users = DbHelper.getInstance(ctx).getAllUsers();
+        for (User u : users) {
+            if (isUserApiKeyValid(u.getUsername())){
+                return false;
+            }
+        }
+        return true;
     }
 
     public static void preloadUserAccounts(Context ctx, PreloadAccountsListener listener) {

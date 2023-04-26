@@ -51,6 +51,7 @@ import org.digitalcampus.oppia.utils.UIUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -64,7 +65,7 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
 
     private Course course;
     private CompleteCourse parsedCourse;
-    private ArrayList<Section> sections;
+    private List<Section> sections;
     @Inject SharedPreferences prefs;
     private CourseIndexRecyclerViewAdapter adapter;
     private String digestJumpTo;
@@ -109,6 +110,8 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
             } else {
                 completeCourseProvider.getCompleteCourseAsync(this, course);
             }
+
+            binding.viewMediaScan.setMediaCourseFilter(course);
         }
 
         binding.viewMediaScan.setMessage(getString(R.string.info_scan_course_media_missing));
@@ -167,7 +170,7 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
         if ((parsedCourse != null) && (sections != null) && (!sections.isEmpty())) {
             parsedCourse.setCourseId(course.getCourseId());
             parsedCourse.updateCourseActivity(this);
-            adapter.notifyDataSetChanged();
+            adapter.reloadLanguage(prefs);
             if (!isBaselineCompleted()) {
                 showBaselineMessage(null);
             } else {
@@ -191,7 +194,7 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
         int order = 104;
         for (CourseMetaPage mmp : ammp) {
             Lang titleLang = mmp.getLang(
-                    prefs.getString(PrefsActivity.PREF_LANGUAGE, Locale.getDefault().getLanguage()));
+                    prefs.getString(PrefsActivity.PREF_CONTENT_LANGUAGE, Locale.getDefault().getLanguage()));
 
             if (titleLang != null) {
                 String title = titleLang.getContent();
@@ -283,7 +286,7 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
 
     private void initializeCourseIndex(boolean animate) {
 
-        adapter = new CourseIndexRecyclerViewAdapter(this, sections, course);
+        adapter = new CourseIndexRecyclerViewAdapter(this, prefs, sections, course);
         adapter.setOnChildItemClickedListener((section, position) -> {
             Activity act = sections.get(section).getActivities().get(position);
             startCourseActivityByDigest(act.getDigest());
@@ -403,9 +406,12 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
         if (key.equalsIgnoreCase(PrefsActivity.PREF_TRIGGER_POINTS_REFRESH)) {
             supportInvalidateOptionsMenu();
         }
+        else if (key.equalsIgnoreCase(PrefsActivity.PREF_CONTENT_LANGUAGE)){
+            adapter.reloadLanguage(prefs);
+        }
     }
 
-    //@Override
+    @Override
     public void onParseComplete(CompleteCourse parsed) {
         binding.loadingCourse.setVisibility(View.GONE);
         parsedCourse = parsed;
@@ -421,7 +427,7 @@ public class CourseIndexActivity extends AppActivity implements OnSharedPreferen
         initializeCourseIndex(true);
     }
 
-    //@Override
+    @Override
     public void onParseError() {
         binding.loadingCourse.setVisibility(View.GONE);
         showErrorMessage();

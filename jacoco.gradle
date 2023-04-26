@@ -1,0 +1,45 @@
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.8.8"
+}
+
+tasks.withType(Test) {
+    jacoco.includeNoLocationClasses = true
+}
+
+
+task jacocoTestReport(type: JacocoReport, dependsOn: ['connectedCheck']) {
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports for Debug build"
+
+    reports {
+        xml.enabled true
+        html.enabled true
+    }
+
+    def fileFilter = [
+            '**/R.class',
+            '**/R$*.class',
+            '**/BuildConfig.*',
+            '**/Manifest*.*',
+            '**/*Test*.*',
+            'android/**/*.*',
+            '**/androidx/**/*.*',
+            '**/com/google/**/*.*',
+            '**/com/squareup/**/*.*',
+            '**/com/facebook/**/*.*',
+            '**/org/junit/**/*.*',
+            '**/org/mockito/**/*.*',
+            '**/org/hamcrest/**/*.*'
+    ]
+
+    def debugTree = fileTree(dir: "${project.buildDir}/intermediates/classes/debug", excludes: fileFilter)
+    def mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.from = files([mainSrc])
+    classDirectories.from = files([debugTree])
+
+    executionData.from = fileTree(dir: "${buildDir}/outputs/code_coverage/normalDebugAndroidTest/connected/", includes: ["**/*.ec"])
+
+}

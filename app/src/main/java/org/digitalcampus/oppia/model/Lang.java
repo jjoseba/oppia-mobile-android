@@ -17,8 +17,6 @@
 
 package org.digitalcampus.oppia.model;
 
-import android.text.TextUtils;
-
 import androidx.annotation.Nullable;
 
 import java.io.Serializable;
@@ -42,13 +40,13 @@ public class Lang implements Serializable {
 
 
     public String getLanguage() {
-        String[] langCountry = this.language.split("_|-");
+        String[] langCountry = this.language.split("[_-]");
         return langCountry[0];
     }
 
     public void setLanguage(String lang) {
         // only set the first part of the lang - not the full localisation
-        String[] langCountry = lang.split("_|-");
+        String[] langCountry = lang.split("[_-]");
         this.language = langCountry[0];
     }
 
@@ -69,6 +67,15 @@ public class Lang implements Serializable {
     }
 
     @Override
+    public String toString() {
+        return "Lang{" +
+                "language='" + language + '\'' +
+                ", content='" + content + '\'' +
+                ", location='" + location + '\'' +
+                '}';
+    }
+
+    @Override
     public boolean equals(@Nullable Object obj) {
         if (obj == null)
             return false;
@@ -76,7 +83,7 @@ public class Lang implements Serializable {
         if (this.getClass() != obj.getClass())
             return false;
 
-        return TextUtils.equals(getLanguage(), ((Lang) obj).getLanguage());
+        return getLanguage() != null && getLanguage().equalsIgnoreCase(((Lang) obj).getLanguage());
     }
 
     @Override

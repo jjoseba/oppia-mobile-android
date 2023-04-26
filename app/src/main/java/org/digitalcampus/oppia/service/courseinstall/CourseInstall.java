@@ -26,6 +26,7 @@ import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.application.SessionManager;
 import org.digitalcampus.oppia.database.DbHelper;
+import org.digitalcampus.oppia.exception.CourseInstallException;
 import org.digitalcampus.oppia.exception.InvalidXMLException;
 import org.digitalcampus.oppia.gamification.GamificationServiceDelegate;
 import org.digitalcampus.oppia.model.CompleteCourse;
@@ -39,9 +40,12 @@ import org.digitalcampus.oppia.utils.xmlreaders.CourseXMLReader;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 
 import androidx.preference.PreferenceManager;
+
+import com.squareup.picasso.Picasso;
 
 public class CourseInstall {
 
@@ -55,7 +59,7 @@ public class CourseInstall {
     public static final String TAG = CourseInstall.class.getSimpleName();
     private static final String STR_ERROR = "Error: ";
 
-    public static void installDownloadedCourse(Context ctx, String filename, String shortname, CourseInstallingListener listener) {
+    public static void installDownloadedCourse(Context ctx, String filename, String shortname, boolean isRestricted, List<Integer> restrictedCohorts, CourseInstallingListener listener) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
         File tempdir = new File(Storage.getStorageLocationRoot(ctx), "temp/");
@@ -65,12 +69,13 @@ public class CourseInstall {
         long startTime = System.currentTimeMillis();
 
         listener.onInstallProgress(1);
-        boolean unzipResult = FileUtils.unzipFiles(Storage.getDownloadPath(ctx), filename, tempdir.getAbsolutePath());
 
-        if (!unzipResult){
+        try {
+            FileUtils.unzipFiles(ctx, Storage.getDownloadPath(ctx), filename, tempdir.getAbsolutePath());
+        } catch (CourseInstallException e) {
             //then was invalid zip file and should be removed
             FileUtils.cleanUp(tempdir, Storage.getDownloadPath(ctx) + filename);
-            listener.onError(ctx.getString(R.string.error_installing_course, shortname));
+            listener.onError(ctx.getString(R.string.error_installing_course, shortname) + ". " + e.getMessage());
             return;
         }
 
@@ -117,6 +122,8 @@ public class CourseInstall {
         }
 
         c.setShortname(courseDir);
+        c.setRestricted(isRestricted);
+        c.setRestrictedCohorts(restrictedCohorts);
         String title = c.getTitle(prefs);
         listener.onInstallProgress(20);
 
@@ -128,6 +135,7 @@ public class CourseInstall {
 
             db.insertActivities(c.getActivities(courseId));
             db.insertCourseMedia(courseId, c.getCourseMedia());
+            db.clearUnlockedSectionsWithUpdatedPasswords(courseId, c.getSections());
             listener.onInstallProgress(40);
 
             long userId = db.getUserId(SessionManager.getUsername(ctx));
@@ -146,7 +154,7 @@ public class CourseInstall {
                 org.apache.commons.io.FileUtils.copyDirectory(src, new File(dest, src.getName().toLowerCase(Locale.US)));
             } catch (IOException e) {
                 Analytics.logException(e);
-                Log.d(TAG, "Error copying course: ", e);
+                Log.e(TAG, "Error copying course: ", e);
                 FileUtils.cleanUp(tempdir, Storage.getDownloadPath(ctx) + filename);
                 listener.onFail(ctx.getString(R.string.error_installing_course, title));
                 return;
@@ -182,6 +190,8 @@ public class CourseInstall {
         c.setCourseId((int)courseId);
         new GamificationServiceDelegate(ctx)
                 .registerCourseDownloadEvent(c);
+
+        invalidateImagesCache(c);
 
         long estimatedTime = System.currentTimeMillis() - startTime;
         Log.d(TAG, "MeasureTime - " + c.getShortname() + ": " + estimatedTime + "ms");
@@ -237,4 +247,15 @@ public class CourseInstall {
 
     }
 
+    // Invalidate course icons from Picasso's cache
+    private static void invalidateImagesCache(CompleteCourse c) {
+        File imagesDir = new File(c.getLocation() + File.separator + "images");
+        File[] images = imagesDir.listFiles();
+        if (images != null) {
+            for (File image : images) {
+                Picasso.get().invalidate(image);
+            }
+        }
+        Picasso.get().invalidate(c.getImageFileFromRoot());
+    }
 }

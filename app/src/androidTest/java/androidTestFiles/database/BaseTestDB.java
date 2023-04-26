@@ -6,17 +6,13 @@ import android.content.SharedPreferences;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import org.digitalcampus.oppia.application.App;
 import org.digitalcampus.oppia.database.DbHelper;
-import org.digitalcampus.oppia.di.AppComponent;
-import org.digitalcampus.oppia.di.AppModule;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 
-import it.cosenonjaviste.daggermock.DaggerMockRule;
+import androidTestFiles.utils.parent.DaggerInjectMockUITest;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -32,7 +28,7 @@ import static org.mockito.Mockito.when;
  * and call setUp() and tearDown() methods.
  */
 @RunWith(AndroidJUnit4.class)
-public abstract class BaseTestDB {
+public abstract class BaseTestDB extends DaggerInjectMockUITest {
 
 
     private TestDBHelper testDBHelper;
@@ -42,19 +38,6 @@ public abstract class BaseTestDB {
     public SharedPreferences prefs;
     @Mock
     SharedPreferences.Editor editor;
-
-    @Rule
-    public DaggerMockRule<AppComponent> daggerRule =
-            new DaggerMockRule<>(AppComponent.class, new AppModule((App) InstrumentationRegistry.getInstrumentation()
-                    .getTargetContext()
-                    .getApplicationContext())).set(
-                    component -> {
-                        App app =
-                                (App) InstrumentationRegistry.getInstrumentation()
-                                        .getTargetContext()
-                                        .getApplicationContext();
-                        app.setComponent(component);
-                    });
 
     @Before
     public void setUp() throws Exception {

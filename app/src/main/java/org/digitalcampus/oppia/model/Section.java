@@ -17,7 +17,7 @@
 
 package org.digitalcampus.oppia.model;
 
-import android.text.TextUtils;
+import org.digitalcampus.oppia.utils.TextUtilsJava;
 
 import java.io.File;
 import java.io.Serializable;
@@ -34,8 +34,10 @@ public class Section extends MultiLangInfoModel implements Serializable  {
 	
 	public static final String TAG = Section.class.getSimpleName();
 	private int order;
-	private ArrayList<Activity> activities;
+	private List<Activity> activities;
 	private String imageFile;
+	private String password;
+	private boolean unlocked = false;
 	
 	public String getImageFile() {
 		return imageFile;
@@ -65,11 +67,35 @@ public class Section extends MultiLangInfoModel implements Serializable  {
 		this.activities.add(activity);
 	}
 	public void setActivities(List<Activity> activities) {
-		this.activities = (ArrayList<Activity>) activities;
+		this.activities = (List<Activity>) activities;
+	}
+
+	public boolean isProtectedByPassword() {
+		return !TextUtilsJava.isEmpty(password);
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getPassword(){
+		return password;
+	}
+
+	public boolean checkPassword(String inputPassword){
+		return TextUtilsJava.equals(password, inputPassword);
+	}
+
+	public boolean isUnlocked() {
+		return unlocked;
+	}
+
+	public void setUnlocked(boolean unlocked) {
+		this.unlocked = unlocked;
 	}
 
 	public boolean hasCustomImage(){
-		return !TextUtils.isEmpty(imageFile);
+		return !TextUtilsJava.isEmpty(imageFile);
 	}
 
 	public String getImageFilePath(String prefix){
