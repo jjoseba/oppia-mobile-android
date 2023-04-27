@@ -92,7 +92,6 @@ public class FileUtils {
                 uncompressedSize += zipEntry.getSize();
             }
         } catch (IOException e) {
-            e.printStackTrace();
             throw new CourseInstallException(e.getMessage());
         }
 

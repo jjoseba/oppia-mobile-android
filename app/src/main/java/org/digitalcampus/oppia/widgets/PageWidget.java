@@ -25,6 +25,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -124,8 +125,7 @@ public class PageWidget extends BaseWidget implements JSInterfaceForInlineInput.
 			JSInterfaceForInlineInput inputJSInterface = new JSInterfaceForInlineInput(getContext());
 			inputJSInterface.setOnInputEnteredListener(this);
 			jsInterfaces.add(inputJSInterface);
-            webview.addJavascriptInterface(inputJSInterface, inputJSInterface.getInterfaceExposedName());
-
+			webview.addJavascriptInterface(inputJSInterface, inputJSInterface.getInterfaceExposedName());
 			webview.loadDataWithBaseURL("file://" + course.getLocation() + File.separator, FileUtils.readFile(url), "text/html", "utf-8", null);
 		} catch (IOException e) {
 			webview.loadUrl("file://" + url);
@@ -142,23 +142,21 @@ public class PageWidget extends BaseWidget implements JSInterfaceForInlineInput.
 				}
             }
 
-            // set up the page to intercept videos
-			/**
-			 * @deprecated (replace as soon as possible)
-			 */
 			@Override
-			@Deprecated
-			public boolean shouldOverrideUrlLoading(WebView view, String url) {
+			public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+				return handleUrl(request.getUrl().getPath());
+			}
 
+			private boolean handleUrl(final String url){
 				if (url.contains("/video/")) {
 					// extract video name from url
 					int startPos = url.indexOf("/video/") + 7;
 					String mediaFileName = url.substring(startPos);
 					PageWidget.super.startMediaPlayerWithFile(mediaFileName);
-                    return true;
-					
+					return true;
+
 				} else {
-					
+
 					try {
 						Intent intent = new Intent(Intent.ACTION_VIEW);
 						Uri data = Uri.parse(url);

@@ -40,7 +40,7 @@ import okhttp3.Response;
 
 public class ResetPasswordTask extends APIRequestTask<User, Object, EntityResult<User>> {
 
-	private SubmitEntityListener mStateListener;
+	private SubmitEntityListener<User> mStateListener;
 
 	public ResetPasswordTask(Context ctx, ApiEndpoint api) { super(ctx, api); }
 

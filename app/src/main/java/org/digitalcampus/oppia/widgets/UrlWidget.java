@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
@@ -97,13 +98,9 @@ public class UrlWidget extends BaseWidget {
 		webview.getSettings().setJavaScriptEnabled(true);
 		webview.getSettings().setAllowFileAccess(true);
 		webview.setWebViewClient(new WebViewClient() {
-			/**      
-			 * @deprecated (replace as soon as possible)
-			 */
 	        @Override
 			@Deprecated
-	        public boolean shouldOverrideUrlLoading(WebView view, String url)
-	        {
+			public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
 	            return false;
 	        }
 	    });

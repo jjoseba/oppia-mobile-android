@@ -29,7 +29,7 @@ public class AdminCheckBoxPreference extends CheckBoxPreference implements Admin
 
     @Override
     protected void onClick() {
-        
+
         if ((customOnPreferenceClickListener != null) && (
             (!isChecked() && mode == PromptAdminDialogMode.ON_CHECK)
             || (isChecked() && mode == PromptAdminDialogMode.ON_UNCHECK)

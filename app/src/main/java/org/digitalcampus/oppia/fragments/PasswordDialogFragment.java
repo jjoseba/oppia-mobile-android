@@ -38,9 +38,8 @@ public class PasswordDialogFragment extends DialogFragment {
     private DialogPasswordBinding binding;
 
     /**
-     *      
      *
-     * @deprecated  
+     * @deprecated
      */
     @Override
     @Deprecated

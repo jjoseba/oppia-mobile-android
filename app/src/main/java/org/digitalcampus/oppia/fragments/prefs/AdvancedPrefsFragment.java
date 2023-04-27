@@ -19,6 +19,7 @@ import androidx.preference.Preference;
 import org.digitalcampus.mobile.learning.R;
 import org.digitalcampus.oppia.activity.AppActivity;
 import org.digitalcampus.oppia.activity.PrefsActivity;
+import org.digitalcampus.oppia.analytics.Analytics;
 import org.digitalcampus.oppia.api.ApiEndpoint;
 import org.digitalcampus.oppia.api.RemoteApiEndpoint;
 import org.digitalcampus.oppia.application.App;
@@ -190,7 +191,7 @@ public class AdvancedPrefsFragment extends BasePreferenceFragment implements Pre
             User user = DbHelper.getInstance(getContext()).getUser(SessionManager.getUsername(getContext()));
             new FetchUserTask().updateLoggedUserProfile(getContext(), apiEndpoint, user);
         } catch (UserNotFoundException e) {
-            e.printStackTrace();
+            Analytics.logException(e);
         }
     }
 
